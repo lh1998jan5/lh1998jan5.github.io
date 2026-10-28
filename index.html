@@ -246,6 +246,59 @@ body{
 .rope:hover .rope-label,.rope:focus-visible .rope-label{opacity:1;transform:translate(-50%,0)}
 .rope.is-dragging .rope-label{opacity:0}
 
+/* ---------- 手机：卡片右上角的换背景小圆钮 ----------
+   窄屏放不下灯绳（绳子会贴着卡片边缘，显得局促），
+   改成卡片右上角一颗磨砂小圆钮，和卡片保持同一种玻璃质感。 */
+.bg-switch{
+  position:absolute;
+  top:14px;
+  right:14px;
+  z-index:3;
+  display:none;                 /* 宽屏用灯绳，这里默认不出现 */
+  align-items:center;
+  justify-content:center;
+  width:36px;
+  height:36px;
+  padding:0;
+  border:1px solid rgba(43,56,48,.09);
+  border-radius:50%;
+  background:rgba(255,255,255,.58);
+  color:#668573;
+  box-shadow:
+    0 6px 16px -10px rgba(28,45,35,.55),
+    inset 0 0 0 1px rgba(255,255,255,.7);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .25s ease,transform .25s ease,box-shadow .25s ease;
+}
+/* 扩大点击区域到 44×44，视觉上仍是 36px 的小圆 */
+.bg-switch::after{
+  content:"";
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+}
+.bg-switch svg{
+  width:17px;
+  height:17px;
+  transition:transform .5s cubic-bezier(.34,1.15,.4,1);
+}
+.bg-switch:hover{background:rgba(255,255,255,.86)}
+.bg-switch:active{transform:scale(.93)}
+.bg-switch.is-turning svg{transform:rotate(180deg)}
+.bg-switch:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 3px rgba(111,148,128,.35);
+}
+/* 首次进入轻轻呼吸一下，提示这里能点（不显眼，不打扰） */
+.bg-switch.is-hint{animation:switchHint 2.4s ease 2.2s 1}
+@keyframes switchHint{
+  0%,100%{box-shadow:0 6px 16px -10px rgba(28,45,35,.55),inset 0 0 0 1px rgba(255,255,255,.7)}
+  45%{box-shadow:0 6px 16px -10px rgba(28,45,35,.55),inset 0 0 0 1px rgba(255,255,255,.7),0 0 0 6px rgba(111,148,128,.12)}
+}
+
 /* ---------- 卡片 ---------- */
 .card{
   position:relative;
@@ -661,9 +714,17 @@ body{
 .er-name input.is-error{border-color:#c58a72}
 
 .er-start{grid-area:start}
-.er-days{grid-area:days}
+.er-days-wrap{
+  grid-area:days;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+}
+.er-unit{display:none;font-style:normal;font-size:12px;letter-spacing:.06em;color:#8a978f}
 .er-start,.er-days{
   width:100%;
+  min-width:0;
   height:36px;
   padding:0 9px;
   border-radius:10px;
@@ -674,6 +735,11 @@ body{
   color:var(--ink);
   font-variant-numeric:tabular-nums;
 }
+.er-start::-webkit-calendar-picker-indicator{
+  opacity:.5;
+  cursor:pointer;
+}
+.er-start:hover::-webkit-calendar-picker-indicator{opacity:.8}
 .er-start:focus,.er-days:focus{
   outline:none;
   border-color:#7fa28d;
@@ -921,14 +987,24 @@ body{
   .foot{display:none}
 }
 
-/* 宽度不够时名称单独占一行，保证自定义提醒的名称输入框完整可见 */
+/* 窄屏：三行布局
+   第一行「名称 + 天数 + 删除」、第二行「日期独占一行」、第三行「说明」
+   日期不再和天数挤在同一行，任何浏览器（含 iOS 原生日期控件）都不会互相压住 */
 @media (max-width:720px){
   .edit-row{
-    grid-template-columns:1fr 1fr 58px;
-    grid-template-areas:"name name del" "start start days" "range range range";
+    grid-template-columns:minmax(0,1fr) 84px 40px;
+    grid-template-areas:
+      "name  days  del"
+      "start start start"
+      "range range range";
     row-gap:8px;
+    column-gap:8px;
   }
-  .er-del{justify-self:end}
+  .er-unit{display:inline}
+  .er-days{text-align:center;appearance:textfield;-moz-appearance:textfield}
+  .er-days::-webkit-outer-spin-button,
+  .er-days::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .er-del{justify-self:end;align-self:center}
 }
 
 /* 手机：弹窗改成从底部升起的抽屉，拇指够得到底部按钮 */
@@ -1043,15 +1119,17 @@ body{
   .rope:hover .rope-label,.rope:focus-visible .rope-label{transform:translateY(0)}
 }
 
-/* 窄屏卡片贴边，绳子再往右让一点，避免珠结压到卡片右上角 */
-@media (max-width:720px){
-  .rope{left:calc(100% - 24px)}
+/* 窄屏：卡片贴边后灯绳没有地方挂，收起来，改用卡片右上角的小圆钮 */
+@media (max-width:820px){
+  .rope{display:none}
+  .bg-switch{display:flex}
 }
 
 @media (prefers-reduced-motion:reduce){
   .card{animation:none}
-  .rope,.rope.is-hint{animation:none !important}
+  .rope,.rope.is-hint,.bg-switch.is-hint{animation:none !important}
   .rope{transition:none}
+  .bg-switch,.bg-switch svg{transition:none}
   .bg-photo{transition:none}
   .copy,.settings,.toast{transition:none}
   .modal-card,.modal-mask{animation:none}
@@ -1073,6 +1151,14 @@ body{
 </button>
 
 <main class="card">
+  <!-- 窄屏用的换背景按钮：和灯绳等价，点一下换一张 -->
+  <button class="bg-switch" id="bgSwitch" type="button" title="换一张背景" aria-label="换一张背景">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M19.5 4.2v4.1h-4.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
   <p class="eyebrow">假期倒计时</p>
 
   <h1 class="date" id="dateLine">—</h1>
@@ -2471,6 +2557,7 @@ body{
     bgPhoto: document.getElementById('bgPhoto'),
     bgPhoto2: document.getElementById('bgPhoto2'),
     rope: document.getElementById('rope'),
+    bgSwitch: document.getElementById('bgSwitch'),
     settingsBtn: document.getElementById('settingsBtn'),
     modal: document.getElementById('modal'),
     modalCard: document.querySelector('.modal-card'),
@@ -2978,6 +3065,24 @@ body{
   }
 
   /* 绳子：按住往下拉，松手换一张（点一下也行） */
+  /* 窄屏的换背景按钮：点一下转半圈，换一张 */
+  function initBgSwitch() {
+    var btn = el.bgSwitch;
+    if (!btn) return;
+
+    var hintTimer = 0;
+    btn.classList.add('is-hint');
+    hintTimer = setTimeout(function () { btn.classList.remove('is-hint'); }, 5000);
+
+    btn.addEventListener('click', function () {
+      clearTimeout(hintTimer);
+      btn.classList.remove('is-hint');
+      btn.classList.add('is-turning');
+      setTimeout(function () { btn.classList.remove('is-turning'); }, 520);
+      manualBackground();
+    });
+  }
+
   function initRope() {
     var rope = el.rope;
     if (!rope) return;
@@ -3156,6 +3261,17 @@ body{
     daysInput.value = String(it.days);
     daysInput.setAttribute('aria-label', '持续天数');
 
+    // 手机上是「名称 + 天数」并排一行，单独一个数字容易看不懂，所以带个单位；
+    // 桌面端五列布局本身够清楚，单位通过 CSS 隐藏
+    var daysWrap = document.createElement('span');
+    daysWrap.className = 'er-days-wrap';
+    var daysUnit = document.createElement('i');
+    daysUnit.className = 'er-unit';
+    daysUnit.setAttribute('aria-hidden', 'true');
+    daysUnit.textContent = '天';
+    daysWrap.appendChild(daysInput);
+    daysWrap.appendChild(daysUnit);
+
     var range = document.createElement('div');
     range.className = 'er-range';
 
@@ -3184,7 +3300,7 @@ body{
 
     li.appendChild(nameCell);
     li.appendChild(startInput);
-    li.appendChild(daysInput);
+    li.appendChild(daysWrap);
     li.appendChild(range);
     li.appendChild(del);
     el.editList.appendChild(li);
@@ -3726,6 +3842,7 @@ body{
   render();
   initBackground();
   initRope();
+  initBgSwitch();
 
   var currentDay = iso(today());
   setInterval(function () {
