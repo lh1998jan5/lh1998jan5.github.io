@@ -622,16 +622,12 @@ body{
   -webkit-overflow-scrolling:touch;
 }
 
+/* 不再单独滚动：假期列表和下面的「背景图片」放在同一层，
+   一起由 .modal-body 滚动，可视区域就是一整个弹窗，不会只剩一小条 */
 .list-scroll{
-  max-height:min(44vh,360px);
   margin:0 -6px;
   padding:0 6px;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-  -webkit-overflow-scrolling:touch;
 }
-.list-scroll::-webkit-scrollbar{width:6px}
-.list-scroll::-webkit-scrollbar-thumb{background:rgba(43,56,48,.16);border-radius:3px}
 
 .edit-list{
   list-style:none;
@@ -987,24 +983,41 @@ body{
   .foot{display:none}
 }
 
-/* 窄屏：三行布局
-   第一行「名称 + 天数 + 删除」、第二行「日期独占一行」、第三行「说明」
-   日期不再和天数挤在同一行，任何浏览器（含 iOS 原生日期控件）都不会互相压住 */
+/* 窄屏：三行
+   第一行「名称 + 右上角删除」、第二行「日期 + 天数」、第三行「说明」
+   日期和天数并排；日期用 minmax(0,1fr) + min-width:0，
+   原生日期控件再宽也只会在自己格子里收缩，不会压到天数上 */
 @media (max-width:720px){
   .edit-row{
-    grid-template-columns:minmax(0,1fr) 84px 40px;
+    position:relative;
+    grid-template-columns:minmax(0,1fr) 74px;
     grid-template-areas:
-      "name  days  del"
-      "start start start"
-      "range range range";
+      "name  name"
+      "start days"
+      "range range";
     row-gap:8px;
     column-gap:8px;
+  }
+  /* 名称行留出右上角删除键的位置，并保证这一行有足够高度，删除键不会压到日期 */
+  .er-name{
+    display:flex;
+    align-items:center;
+    min-height:44px;
+    min-width:0;
+    padding-right:48px;
   }
   .er-unit{display:inline}
   .er-days{text-align:center;appearance:textfield;-moz-appearance:textfield}
   .er-days::-webkit-outer-spin-button,
   .er-days::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .er-del{justify-self:end;align-self:center}
+  .er-del{
+    position:absolute;
+    top:11px;
+    right:0;
+    width:40px;
+    height:40px;
+    font-size:18px;
+  }
 }
 
 /* 手机：弹窗改成从底部升起的抽屉，拇指够得到底部按钮 */
@@ -1024,7 +1037,6 @@ body{
   }
   .modal-head{padding:20px 18px 10px}
   .modal-body{padding:2px 18px 6px}
-  .list-scroll{max-height:min(40vh,40svh)}
   .modal-foot{
     display:grid;
     grid-template-columns:1fr 1fr;
@@ -1046,7 +1058,6 @@ body{
   .settings{padding:0 14px;font-size:13px}
   .bg-fixed{max-width:none;flex:1 1 100%}
   .btn-mini{margin-left:0}
-  .list-scroll{max-height:min(38vh,38svh)}
 }
 
 /* 大屏手机 / 折叠屏窄态 */
