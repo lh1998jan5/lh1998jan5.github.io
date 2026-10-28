@@ -1,18 +1,3753 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title></title>
-        <style media="screen">
-            * {
-                margin: 0;
-                padding: 0;
-            }
-        </style>
-    </head>
-    <body>
-    </body>
-    <script type="text/javascript">
-        window.location.href="http://fly-liuhao.gitee.io";
-    </script>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f7f2ea">
+<meta name="description" content="一页看清今天、农历、距离周末和接下来几个假期的倒计时，改好日期还能一键复制成纯文本发到群里。">
+<meta name="format-detection" content="telephone=no,email=no">
+<title>假期倒计时</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="假期倒计时">
+<meta property="og:title" content="假期倒计时">
+<meta property="og:description" content="距离周末和下一个假期还有几天，一页看清，可一键复制成群通知。">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<!-- 绑定域名后，想让微信/朋友圈分享出大图，把下面一行取消注释并换成你的域名：
+<meta property="og:image" content="https://你的域名/backgrounds/1280/DSC07531.JPG"> -->
+<style>
+/* =========================================================
+   ③ 视觉样式（颜色、圆角、字号都可在此调整）
+   ========================================================= */
+:root{
+  --ink:#2b3830;
+  --ink-2:#55645b;
+  --ink-3:#87948c;
+  --accent:#3f6455;
+  --accent-2:#6f9480;
+  --hair:rgba(43,56,48,.09);
+  --radius:30px;
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC","Source Han Sans SC",sans-serif;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+
+html{
+  -webkit-text-size-adjust:100%;
+  /* 任何情况下都不允许整页左右滑动 */
+  overflow-x:clip;
+}
+
+body{
+  margin:0;
+  min-height:100vh;          /* 老浏览器兜底 */
+  min-height:100svh;         /* 手机地址栏收起/展开都不会跳动 */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  /* 刘海屏 / 灵动岛 / 底部小白条：留出安全区，再多留一点呼吸感 */
+  padding:
+    calc(clamp(16px,3.2vh,48px) + env(safe-area-inset-top,0px))
+    calc(clamp(18px,4vw,56px) + env(safe-area-inset-right,0px))
+    calc(clamp(16px,3.2vh,48px) + env(safe-area-inset-bottom,0px))
+    calc(clamp(18px,4vw,56px) + env(safe-area-inset-left,0px));
+  font-family:var(--font);
+  color:var(--ink);
+  background:#f7f2ea;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:clip;
+}
+
+/* ---------- 背景：渐变兜底 + 可选图片 ---------- */
+.bg-fallback{
+  position:fixed;
+  inset:0;
+  z-index:-3;
+  background-color:#f7f2ea;
+  background-image:
+    radial-gradient(900px 640px at 12% 4%, rgba(242,205,180,.62), transparent 62%),
+    radial-gradient(820px 580px at 88% 2%, rgba(196,217,201,.60), transparent 60%),
+    radial-gradient(900px 720px at 80% 98%, rgba(233,208,195,.52), transparent 62%),
+    radial-gradient(720px 520px at 4% 88%, rgba(212,221,213,.55), transparent 60%),
+    linear-gradient(165deg,#fdf9f3 0%,#f8f3ec 46%,#f2eee6 100%);
+}
+.bg-fallback::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:.28;
+  mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.30'/%3E%3C/svg%3E");
+}
+.bg-photo{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  overflow:hidden;
+  background-color:#eee9e1;
+  opacity:0;
+  transition:opacity 1.1s ease;
+  will-change:opacity;
+  pointer-events:none;
+}
+.bg-photo.is-ready{opacity:1}
+/* 背景统一用 <img> + object-fit:cover 铺满：
+   不论原图是 3:2、16:9 还是竖图、也不论分辨率多少，
+   都按原比例裁切铺满，绝不拉伸变形（不用 background-size:100% 100%） */
+.bg-photo img{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center center;
+  /* 避免个别高分屏因取整在边缘露出 1px 底色 */
+  transform:scale(1.006);
+}
+.bg-photo::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,.16) 42%,rgba(255,250,244,.38));
+}
+
+/* ---------- 绳子：下拉换背景 ---------- */
+.rope{
+  position:fixed;
+  top:0;
+  /* 落在「卡片右缘 → 视口右缘」之间；窄屏没有富余空间时贴右，绝不超出屏幕 */
+  left:min(calc(50% + 495px), calc(100% - 30px));
+  z-index:6;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:30px;
+  height:72px;
+  padding:0;
+  border:0;
+  background:none;
+  cursor:grab;
+  touch-action:none;
+  /* 只拉伸绳子本身，顶端始终固定在视口上沿 */
+  transition:height .5s cubic-bezier(.22,1,.36,1);
+  -webkit-tap-highlight-color:transparent;
+}
+/* 触屏上把可点区域向两侧各放宽 10px（视觉仍是一条细线） */
+.rope::before{
+  content:"";
+  position:absolute;
+  inset:0 -10px;
+}
+.rope:active{cursor:grabbing}
+.rope.is-dragging{transition:none}
+.rope.is-hint{animation:ropeHint 1.4s cubic-bezier(.4,0,.3,1) 1.9s 1}
+@keyframes ropeHint{
+  0%,100%{height:72px}
+  38%{height:90px}
+  58%{height:76px}
+  74%{height:82px}
+}
+.rope-line{
+  position:relative;
+  width:2px;
+  flex:0 0 auto;
+  /* 线止于白色外圈的上沿，珠结整体压在线的下方，互不重叠 */
+  height:calc(100% - 14px);
+  /* 顶部不封口，让线从屏幕边缘完整出现 */
+  border-radius:0 0 2px 2px;
+  /* 灰色渐变：越往上越浅；两侧不加白色描边 */
+  background:linear-gradient(180deg,
+    rgba(170,170,170,.45) 0,
+    rgba(150,150,150,.52) 18px,
+    rgba(122,122,122,.6) 55%,
+    rgba(102,102,102,.68) 100%);
+  transition:background .2s ease;
+}
+.rope:hover .rope-line{
+  background:linear-gradient(180deg,
+    rgba(176,176,176,.5) 0,
+    rgba(156,156,156,.56) 18px,
+    rgba(128,128,128,.65) 55%,
+    rgba(108,108,108,.74) 100%);
+}
+.rope.is-dragging .rope-line{
+  background:linear-gradient(180deg,
+    rgba(164,164,164,.54) 0,
+    rgba(142,142,142,.6) 18px,
+    rgba(114,114,114,.7) 55%,
+    rgba(92,92,92,.8) 100%);
+}
+.rope-knot{
+  position:relative;
+  z-index:1;
+  width:11px;
+  height:11px;
+  margin-top:3px;
+  border-radius:50%;
+  /* 第一版的灰色半透明珠结 */
+  background:rgba(43,56,48,.55);
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,.62),
+    0 2px 8px rgba(43,56,48,.28);
+  transition:background .2s ease,box-shadow .2s ease,transform .2s ease;
+}
+.rope:hover .rope-knot{
+  background:rgba(43,56,48,.68);
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,.68),
+    0 3px 10px rgba(43,56,48,.32);
+}
+.rope.is-dragging .rope-knot{
+  transform:scale(1.06);
+  box-shadow:
+    0 0 0 4px rgba(255,255,255,.68),
+    0 4px 14px rgba(43,56,48,.32);
+}
+.rope:focus-visible{outline:none}
+.rope:focus-visible .rope-knot{
+  box-shadow:
+    0 0 0 3px rgba(255,255,255,.6),
+    0 0 0 5px rgba(70,78,72,.28),
+    0 2px 8px rgba(43,56,48,.28);
+}
+.rope-label{
+  position:absolute;
+  top:calc(100% + 9px);
+  left:50%;
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(255,252,246,.94);
+  color:#3f5b4d;
+  font-size:10.5px;
+  font-weight:500;
+  letter-spacing:.08em;
+  white-space:nowrap;
+  box-shadow:
+    0 8px 20px -10px rgba(24,40,30,.5),
+    inset 0 0 0 1px rgba(255,255,255,.8);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
+  opacity:0;
+  transform:translate(-50%,-4px);
+  transition:opacity .2s ease,transform .2s ease;
+  pointer-events:none;
+}
+.rope-label::before{
+  content:"↓";
+  margin-right:4px;
+  font-size:10px;
+  opacity:.55;
+}
+.rope:hover .rope-label,.rope:focus-visible .rope-label{opacity:1;transform:translate(-50%,0)}
+.rope.is-dragging .rope-label{opacity:0}
+
+/* ---------- 卡片 ---------- */
+.card{
+  position:relative;
+  width:min(660px,100%);
+  min-width:0;
+  padding:clamp(26px,4.2vw,44px) clamp(22px,4.2vw,44px) clamp(22px,3.4vw,32px);
+  border-radius:var(--radius);
+  background:linear-gradient(170deg,rgba(255,255,255,.89),rgba(255,255,255,.76));
+  border:1px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 0 0 1px rgba(43,56,48,.055),
+    0 40px 90px -44px rgba(38,54,45,.55),
+    0 10px 28px -20px rgba(38,54,45,.35),
+    inset 0 1px 0 rgba(255,255,255,.9);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  backdrop-filter:blur(24px) saturate(160%);
+  animation:rise .85s cubic-bezier(.22,.8,.3,1) both;
+}
+@keyframes rise{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:none}
+}
+
+/* ---------- 页首 ---------- */
+.eyebrow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.34em;
+  color:#7d9186;
+}
+.eyebrow::before{
+  content:"";
+  width:22px;
+  height:1px;
+  background:currentColor;
+  opacity:.55;
+}
+
+.date{
+  margin:14px 0 0;
+  font-size:clamp(25px,4.4vw,33px);
+  font-weight:600;
+  line-height:1.25;
+  letter-spacing:.02em;
+  color:var(--ink);
+}
+
+.meta{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:9px 0 0;
+  font-size:13.5px;
+  letter-spacing:.05em;
+  color:#4f5f56;
+}
+.meta .sep{color:var(--ink-3);opacity:.55}
+
+/* ---------- 周末倒计时 ---------- */
+.weekend{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-top:26px;
+  padding:15px 18px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.65);
+  background:linear-gradient(100deg,rgba(126,158,140,.15),rgba(232,193,171,.17));
+}
+.weekend .label{
+  font-size:14px;
+  letter-spacing:.03em;
+  color:#48584f;
+}
+.weekend .value{
+  font-size:23px;
+  font-weight:600;
+  line-height:1;
+  color:var(--accent);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.weekend .value small{
+  margin-left:3px;
+  font-size:12px;
+  font-weight:400;
+  color:#6d8176;
+  letter-spacing:.02em;
+}
+
+/* ---------- 节日列表 ---------- */
+.list{
+  list-style:none;
+  margin:20px 0 0;
+  padding:0;
+}
+.item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:14px 2px;
+  border-bottom:1px solid var(--hair);
+}
+.item:last-child{
+  border-bottom:0;
+  padding-bottom:2px;
+}
+.item .name{
+  font-size:15.5px;
+  font-weight:500;
+  letter-spacing:.04em;
+  color:#33413a;
+}
+.item.is-next .name::before{
+  content:"";
+  display:inline-block;
+  width:5px;
+  height:5px;
+  margin-right:8px;
+  border-radius:50%;
+  background:var(--accent-2);
+  vertical-align:2px;
+}
+.item .sub{
+  margin-top:4px;
+  font-size:11.5px;
+  letter-spacing:.03em;
+  color:#5f6f66;
+}
+.tag{
+  display:inline-block;
+  margin-left:8px;
+  padding:1px 7px 2px;
+  border-radius:999px;
+  border:1px solid rgba(120,140,128,.22);
+  background:rgba(120,140,128,.10);
+  color:#6f8479;
+  font-size:9.5px;
+  font-weight:400;
+  letter-spacing:.05em;
+  vertical-align:1px;
+}
+.item .num{
+  font-size:19px;
+  font-weight:600;
+  line-height:1;
+  color:#4d7361;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.item .num small{
+  margin-left:2px;
+  font-size:11px;
+  font-weight:400;
+  color:#7d9186;
+}
+
+/* ---------- 操作区：复制 + 假期设置 ---------- */
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top:26px;
+}
+.copy{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  flex:1 1 auto;
+  min-width:0;
+  height:52px;
+  border:0;
+  border-radius:16px;
+  font-family:inherit;
+  font-size:15px;
+  letter-spacing:.1em;
+  color:#fff;
+  cursor:pointer;
+  background:linear-gradient(135deg,#5f8672,#7fa28d);
+  box-shadow:
+    0 16px 30px -18px rgba(63,100,85,.95),
+    inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .18s ease, box-shadow .25s ease, background .3s ease;
+}
+.copy:hover{
+  transform:translateY(-1px);
+  box-shadow:0 20px 34px -18px rgba(63,100,85,1), inset 0 1px 0 rgba(255,255,255,.3);
+}
+.copy:active{transform:translateY(0) scale(.995)}
+.copy:focus-visible{outline:2px solid #3f6455;outline-offset:3px}
+.copy.done{background:linear-gradient(135deg,#4f7a63,#6f9581)}
+.copy .ico{width:15px;height:15px;flex:none;opacity:.92}
+.copy.done .ico{display:none}
+
+.settings{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  flex:0 0 auto;
+  height:52px;
+  padding:0 18px;
+  border-radius:16px;
+  border:1px solid rgba(63,100,85,.18);
+  background:rgba(255,255,255,.55);
+  color:#3f6455;
+  font-family:inherit;
+  font-size:14px;
+  letter-spacing:.08em;
+  cursor:pointer;
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+  transition:background .2s ease, border-color .2s ease, transform .18s ease;
+}
+.settings:hover{
+  background:rgba(255,255,255,.82);
+  border-color:rgba(63,100,85,.32);
+  transform:translateY(-1px);
+}
+.settings:active{transform:none}
+.settings:focus-visible{outline:2px solid #3f6455;outline-offset:3px}
+.settings svg{width:15px;height:15px;flex:none;opacity:.85}
+
+/* ---------- 弹窗 ---------- */
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:clamp(12px,3vw,32px);
+}
+.modal[hidden]{display:none}
+.modal-mask{
+  position:absolute;
+  inset:0;
+  background:rgba(32,44,37,.38);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
+  animation:fade .28s ease both;
+}
+.modal-card{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  width:min(680px,100%);
+  max-height:min(90vh,880px);   /* 老浏览器兜底 */
+  max-height:min(90svh,880px);  /* 手机地址栏变化时不抖动 */
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.9);
+  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(252,250,246,.92));
+  box-shadow:0 50px 110px -50px rgba(30,44,36,.7);
+  overflow:hidden;
+  animation:pop .36s cubic-bezier(.22,.8,.3,1) both;
+}
+.modal-card:focus{outline:none}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pop{
+  from{opacity:0;transform:translateY(14px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+
+.modal-head{
+  position:relative;
+  padding:24px 26px 12px;
+}
+.modal-head h2{
+  margin:0;
+  font-size:18px;
+  font-weight:600;
+  letter-spacing:.04em;
+  color:var(--ink);
+}
+.modal-sub{
+  margin:7px 0 0;
+  font-size:12px;
+  letter-spacing:.03em;
+  color:#7f8d85;
+}
+.modal-x{
+  position:absolute;
+  top:18px;right:18px;
+  width:34px;height:34px;
+  display:grid;place-items:center;
+  border:0;border-radius:10px;
+  background:transparent;
+  color:#7f8d85;
+  font-size:20px;line-height:1;
+  cursor:pointer;
+  transition:background .18s ease, color .18s ease;
+}
+.modal-x:hover{background:rgba(43,56,48,.06);color:#3f6455}
+.modal-x:focus-visible{outline:2px solid #3f6455;outline-offset:2px}
+
+.modal-status{
+  margin:12px 0 0;
+  padding:8px 12px;
+  border-radius:10px;
+  background:rgba(126,158,140,.12);
+  font-size:11.5px;
+  line-height:1.6;
+  letter-spacing:.02em;
+  color:#5f7268;
+}
+.modal-status.is-warn{background:rgba(214,166,120,.16);color:#8a6a4a}
+
+.modal-body{
+  flex:1 1 auto;
+  min-height:0;              /* 让内容在 flex 列里正确滚动 */
+  padding:4px 26px 6px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+
+.list-scroll{
+  max-height:min(44vh,360px);
+  margin:0 -6px;
+  padding:0 6px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.list-scroll::-webkit-scrollbar{width:6px}
+.list-scroll::-webkit-scrollbar-thumb{background:rgba(43,56,48,.16);border-radius:3px}
+
+.edit-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+.list-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 0 2px;
+  font-size:11px;
+  letter-spacing:.08em;
+  color:#8a978f;
+}
+.add-btn{
+  height:28px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px dashed rgba(63,100,85,.35);
+  background:rgba(255,255,255,.6);
+  font-family:inherit;
+  font-size:12px;
+  letter-spacing:.06em;
+  color:var(--accent);
+  cursor:pointer;
+  transition:background .2s ease,border-color .2s ease;
+}
+.add-btn:hover{background:rgba(111,148,128,.14);border-color:rgba(63,100,85,.55)}
+
+.edit-row{
+  display:grid;
+  /* 名称列给足宽度，自定义提醒的名称默认最多 12 字，要能完整显示 */
+  grid-template-columns:minmax(0,1fr) 128px 54px 194px 24px;
+  grid-template-areas:"name start days range del";
+  gap:8px 9px;
+  align-items:center;
+  padding:11px 0;
+  border-bottom:1px solid var(--hair);
+}
+.edit-row:last-of-type{border-bottom:0}
+.edit-row.is-changed{background:linear-gradient(90deg,rgba(126,158,140,.10),transparent 72%)}
+.edit-row.is-off{opacity:.42}
+.edit-row.is-off .er-name{text-decoration:line-through}
+.edit-row.is-off .er-start,
+.edit-row.is-off .er-days,
+.edit-row.is-off .er-name input{pointer-events:none}
+
+.er-name{
+  grid-area:name;
+  min-width:0;
+  font-size:14px;
+  letter-spacing:.04em;
+  color:#33413a;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.er-name input{
+  width:100%;
+  height:30px;
+  padding:0 8px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:transparent;
+  font-family:inherit;
+  font-size:14px;
+  letter-spacing:.04em;
+  color:#33413a;
+}
+.er-name input::placeholder{color:#a7b2ab;letter-spacing:.02em}
+.er-name input:hover{border-color:rgba(43,56,48,.14)}
+.er-name input:focus{
+  outline:none;
+  border-color:#7fa28d;
+  background:rgba(255,255,255,.8);
+}
+.er-name input.is-error{border-color:#c58a72}
+
+.er-start{grid-area:start}
+.er-days{grid-area:days}
+.er-start,.er-days{
+  width:100%;
+  height:36px;
+  padding:0 9px;
+  border-radius:10px;
+  border:1px solid rgba(43,56,48,.14);
+  background:rgba(255,255,255,.72);
+  font-family:inherit;
+  font-size:13px;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.er-start:focus,.er-days:focus{
+  outline:none;
+  border-color:#7fa28d;
+  box-shadow:0 0 0 3px rgba(111,148,128,.18);
+}
+.er-start.is-error,.er-days.is-error{
+  border-color:#c58a72;
+  box-shadow:0 0 0 3px rgba(197,138,114,.16);
+}
+.er-range{
+  grid-area:range;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  min-width:0;
+  font-size:10.5px;
+  letter-spacing:.03em;
+  color:#8a978f;
+}
+.er-range .er-cap{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.er-range.is-error{color:#b57a62}
+.er-yearly{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  flex:none;
+  font-size:10px;
+  color:#6f7d75;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.er-yearly input{margin:0;width:13px;height:13px;accent-color:#5f8a74}
+
+.er-del{
+  grid-area:del;
+  width:24px;
+  height:24px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#9aa79f;
+  font-size:15px;
+  line-height:1;
+  cursor:pointer;
+  transition:background .18s ease,color .18s ease;
+}
+.er-del:hover{background:rgba(197,138,114,.16);color:#b57a62}
+.er-del.is-undo:hover{background:rgba(111,148,128,.18);color:var(--accent)}
+
+.modal-sec{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px dashed rgba(43,56,48,.13);
+}
+.modal-sec h3{
+  margin:0 0 10px;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.1em;
+  color:#8a978f;
+}
+.bg-row{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.bg-mode,.bg-fixed,.bg-every{
+  height:34px;
+  padding:0 10px;
+  border-radius:10px;
+  border:1px solid rgba(43,56,48,.14);
+  background:rgba(255,255,255,.72);
+  font-family:inherit;
+  font-size:12.5px;
+  color:var(--ink);
+}
+.bg-mode:focus,.bg-fixed:focus,.bg-every:focus{
+  outline:none;
+  border-color:#7fa28d;
+  box-shadow:0 0 0 3px rgba(111,148,128,.18);
+}
+/* 自绘下拉箭头：宽度由 JS 按当前选中项文字收紧，箭头不再飘在框的最右边 */
+.bg-mode,.bg-fixed{
+  -webkit-appearance:none;
+  appearance:none;
+  padding-right:26px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236f7d75' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 8px center;
+  background-size:9px 6px;
+  cursor:pointer;
+  text-overflow:ellipsis;
+}
+.bg-mode{flex:0 0 auto}
+.bg-every{width:60px;font-variant-numeric:tabular-nums;text-align:center}
+.bg-fixed{flex:1 1 140px;min-width:0;max-width:240px}
+.bg-pre{font-size:12.5px;color:#6f7d75}
+.btn-mini{height:34px;padding:0 12px;font-size:12px;border-radius:10px;margin-left:auto}
+
+.modal-path{
+  margin:8px 0 12px;
+  font-size:10px;
+  line-height:1.6;
+  letter-spacing:.02em;
+  color:#9aa79f;
+  word-break:break-all;
+}
+.modal-tip{
+  margin:12px 0 10px;
+  padding-top:12px;
+  border-top:1px dashed rgba(43,56,48,.13);
+  font-size:10.5px;
+  line-height:1.75;
+  letter-spacing:.02em;
+  color:#8a978f;
+}
+
+.modal-foot{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  padding:14px 20px;
+  padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  border-top:1px solid var(--hair);
+  background:rgba(255,255,255,.55);
+}
+.modal-foot .spacer{flex:1}
+.btn{
+  height:38px;
+  padding:0 15px;
+  border-radius:11px;
+  border:1px solid transparent;
+  font-family:inherit;
+  font-size:13px;
+  letter-spacing:.04em;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:background .18s ease, border-color .18s ease, transform .16s ease, box-shadow .2s ease;
+}
+.btn:focus-visible{outline:2px solid #3f6455;outline-offset:2px}
+.btn-ghost{
+  border-color:rgba(43,56,48,.14);
+  background:rgba(255,255,255,.7);
+  color:#4f6057;
+}
+.btn-ghost:hover{background:#fff;border-color:rgba(43,56,48,.26)}
+.btn-primary{
+  background:linear-gradient(135deg,#5f8672,#7fa28d);
+  color:#fff;
+  box-shadow:0 10px 22px -14px rgba(63,100,85,.95), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 26px -14px rgba(63,100,85,1)}
+.btn-primary:active{transform:none}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:calc(34px + env(safe-area-inset-bottom,0px));
+  z-index:60;
+  max-width:calc(100vw - 36px);
+  padding:10px 20px;
+  border-radius:999px;
+  background:rgba(43,58,48,.93);
+  color:#fff;
+  font-size:13px;
+  line-height:1.5;
+  letter-spacing:.04em;
+  text-align:center;
+  opacity:0;
+  transform:translate(-50%,12px);
+  pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.foot{
+  margin:16px 0 0;
+  text-align:center;
+  font-size:10.5px;
+  letter-spacing:.06em;
+  color:#6f7d75;
+}
+
+.note{
+  margin:16px 0 0;
+  font-size:11px;
+  line-height:1.65;
+  letter-spacing:.03em;
+  color:#7f8d85;
+}
+.note[hidden]{display:none}
+
+.sr-only{
+  position:absolute;
+  width:1px;height:1px;
+  padding:0;margin:-1px;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0;
+}
+
+/* =========================================================
+   ④ 响应式：手机 / 平板 / 电脑
+   ---------------------------------------------------------
+   断点：≤560 手机 · 561–1024 平板 · ≥1025 电脑
+   另有按高度（矮屏、横屏手机）、按输入方式（触屏）的补充规则。
+   布局全部用 flex + 百分比 + clamp，不写死像素宽度。
+   ========================================================= */
+
+/* 屏幕高度较小时收紧纵向间距，避免一屏放不下 */
+@media (max-height:880px){
+  .card{padding-top:clamp(22px,3.2vw,34px);padding-bottom:clamp(18px,2.6vw,24px)}
+  .weekend{margin-top:20px;padding:13px 16px}
+  .list{margin-top:14px}
+  .item{padding:11px 2px}
+  .note{margin-top:12px}
+  .actions{margin-top:20px}
+  .foot{margin-top:12px}
+}
+
+/* 平板：卡片略宽一点，圆角跟着放大，避免小窗口感 */
+@media (min-width:768px) and (max-width:1024px){
+  .card{width:min(680px,100%);border-radius:32px}
+}
+
+/* 横屏手机（高度很矮）：压扁纵向节奏，隐藏最下面的说明行 */
+@media (max-height:560px) and (orientation:landscape){
+  .card{padding-top:20px;padding-bottom:18px;border-radius:22px}
+  .date{margin-top:8px;font-size:clamp(22px,5vh,28px)}
+  .weekend{margin-top:14px;padding:10px 14px}
+  .list{margin-top:10px}
+  .item{padding:9px 2px}
+  .note{margin-top:8px}
+  .actions{margin-top:14px}
+  .copy,.settings{height:46px}
+  .foot{display:none}
+}
+
+/* 宽度不够时名称单独占一行，保证自定义提醒的名称输入框完整可见 */
+@media (max-width:720px){
+  .edit-row{
+    grid-template-columns:1fr 1fr 58px;
+    grid-template-areas:"name name del" "start start days" "range range range";
+    row-gap:8px;
+  }
+  .er-del{justify-self:end}
+}
+
+/* 手机：弹窗改成从底部升起的抽屉，拇指够得到底部按钮 */
+@media (max-width:640px){
+  .modal{align-items:flex-end;padding:0}
+  .modal-card{
+    width:100%;
+    max-width:none;
+    max-height:min(92vh,92svh);
+    border-radius:22px 22px 0 0;
+    border-bottom:0;
+    animation:sheetUp .34s cubic-bezier(.22,.8,.3,1) both;
+  }
+  @keyframes sheetUp{
+    from{opacity:.5;transform:translateY(30px)}
+    to{opacity:1;transform:none}
+  }
+  .modal-head{padding:20px 18px 10px}
+  .modal-body{padding:2px 18px 6px}
+  .list-scroll{max-height:min(40vh,40svh)}
+  .modal-foot{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    padding:12px 14px;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  }
+  .modal-foot .btn{width:100%;height:42px;padding:0 10px;font-size:13px}
+  .modal-foot .spacer{display:none}
+}
+
+/* 手机主卡片 */
+@media (max-width:560px){
+  .card{border-radius:24px}
+  .weekend{padding:13px 15px}
+  .weekend .value{font-size:21px}
+  .item{padding:13px 2px}
+  .date{letter-spacing:0}
+  .settings{padding:0 14px;font-size:13px}
+  .bg-fixed{max-width:none;flex:1 1 100%}
+  .btn-mini{margin-left:0}
+  .list-scroll{max-height:min(38vh,38svh)}
+}
+
+/* 大屏手机 / 折叠屏窄态 */
+@media (max-width:400px){
+  .card{padding-left:18px;padding-right:18px}
+  .weekend{flex-wrap:wrap;row-gap:4px}
+  .item .name{font-size:15px}
+  .item .num{font-size:18px}
+  .copy{font-size:14px;letter-spacing:.06em}
+  .settings{font-size:12.5px;padding:0 12px}
+}
+
+/* 超窄屏（iPhone SE 一代 / 320px） */
+@media (max-width:360px){
+  body{
+    padding-left:calc(12px + env(safe-area-inset-left,0px));
+    padding-right:calc(12px + env(safe-area-inset-right,0px));
+  }
+  .date{font-size:23px}
+  .eyebrow{letter-spacing:.24em}
+  .weekend .label{font-size:13px}
+  .weekend .value{font-size:19px}
+  .item{padding:12px 2px;gap:10px}
+  .copy{font-size:13.5px;letter-spacing:.04em;gap:7px}
+  .copy .ico{width:14px;height:14px}
+  .settings{font-size:12px;padding:0 10px;gap:5px}
+  .modal-foot .btn{font-size:12px;padding:0 8px}
+}
+
+/* 矮屏手机（iPhone SE / 8 这类 667px 高的屏幕）：再压一档，
+   尽量让「复制通知」和「假期设置」留在第一屏 */
+@media (max-height:700px){
+  body{
+    padding-top:calc(12px + env(safe-area-inset-top,0px));
+    padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  }
+  .card{padding-top:20px;padding-bottom:16px;border-radius:22px}
+  .date{margin-top:10px}
+  .weekend{margin-top:14px;padding:10px 14px}
+  .list{margin-top:10px}
+  .item{padding:9px 2px}
+  .item .sub{margin-top:2px}
+  .actions{margin-top:14px}
+  .foot{display:none}
+}
+
+/* 触屏设备：点击区域按 44px 走，输入框 16px 避免 iOS 聚焦时自动放大 */
+@media (hover:none),(pointer:coarse){
+  .copy,.settings{height:54px}
+  .modal-x{top:12px;right:12px;width:44px;height:44px;font-size:24px}
+  .add-btn{height:36px;padding:0 14px;font-size:13px}
+  .er-del{width:40px;height:40px;font-size:18px}
+  .er-name input,.er-start,.er-days{font-size:16px}
+  .er-name input{height:40px}
+  .er-start,.er-days{height:44px}
+  .er-yearly{font-size:11.5px}
+  .er-yearly input{width:16px;height:16px}
+  .bg-mode,.bg-fixed,.bg-every{height:40px}
+  .btn{height:44px}
+}
+
+/* 平板等宽屏又用触屏时，编辑行恢复五列，但给日期框和删除键留足宽度 */
+@media (hover:none) and (min-width:721px),(pointer:coarse) and (min-width:721px){
+  .edit-row{grid-template-columns:minmax(0,1fr) 140px 62px 176px 40px}
+}
+
+/* 窄屏时标签改为向右对齐，避免超出屏幕 */
+@media (max-width:840px){
+  .rope-label{left:auto;right:2px;transform:translateY(-4px)}
+  .rope:hover .rope-label,.rope:focus-visible .rope-label{transform:translateY(0)}
+}
+
+/* 窄屏卡片贴边，绳子再往右让一点，避免珠结压到卡片右上角 */
+@media (max-width:720px){
+  .rope{left:calc(100% - 24px)}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .card{animation:none}
+  .rope,.rope.is-hint{animation:none !important}
+  .rope{transition:none}
+  .bg-photo{transition:none}
+  .copy,.settings,.toast{transition:none}
+  .modal-card,.modal-mask{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-fallback" aria-hidden="true"></div>
+<!-- 两层交叉淡化；每层一张 <img>，等比铺满，不拉伸 -->
+<div class="bg-photo" id="bgPhoto" aria-hidden="true"><img alt="" decoding="async"></div>
+<div class="bg-photo" id="bgPhoto2" aria-hidden="true"><img alt="" decoding="async"></div>
+
+<!-- 绳子：按住往下拉，换一张背景 -->
+<button class="rope" id="rope" type="button" title="按住往下拉，换一张背景" aria-label="下拉更换背景">
+  <span class="rope-line"></span>
+  <span class="rope-knot"></span>
+  <span class="rope-label">下拉换背景</span>
+</button>
+
+<main class="card">
+  <p class="eyebrow">假期倒计时</p>
+
+  <h1 class="date" id="dateLine">—</h1>
+  <p class="meta">
+    <span id="lunarText">农历</span>
+    <span class="sep" aria-hidden="true">｜</span>
+    <span id="weekText">星期</span>
+  </p>
+
+  <section class="weekend" aria-label="距离周末休息">
+    <span class="label">距离本周周末休息还有</span>
+    <span class="value"><span id="weekendNum">0</span><small>天</small></span>
+  </section>
+
+  <ul class="list" id="holidayList"></ul>
+
+  <p class="note" id="dataNote" hidden></p>
+
+  <div class="actions">
+    <button class="copy" id="copyBtn" type="button">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="9" width="11" height="11" rx="2.6"></rect>
+        <path d="M15.2 5.6A2.6 2.6 0 0 0 12.6 3.4H6.2A2.6 2.6 0 0 0 3.6 6v6.4a2.6 2.6 0 0 0 2.2 2.6"></path>
+      </svg>
+      <span id="copyLabel">复制通知</span>
+    </button>
+
+    <button class="settings" id="settingsBtn" type="button" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3.5" y="5" width="17" height="16" rx="3"></rect>
+        <path d="M8 3v4M16 3v4M3.5 10.5h17"></path>
+        <path d="M8 14.5h.01M12 14.5h.01M16 14.5h.01"></path>
+      </svg>
+      假期设置
+    </button>
+  </div>
+
+  <p class="foot">假期日期依据国务院办公厅公布安排 · 农历由前端实时换算</p>
+  <p class="sr-only" id="live" role="status" aria-live="polite"></p>
+</main>
+
+<!-- 假期设置弹窗：查看 / 修正近一年的放假日期 -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+    <header class="modal-head">
+      <h2 id="modalTitle">假期安排</h2>
+      <p class="modal-sub" id="modalSub">近一年</p>
+      <button class="modal-x" type="button" data-close aria-label="关闭">×</button>
+      <p class="modal-status" id="modalStatus"></p>
+    </header>
+
+    <div class="modal-body" id="modalBody">
+      <div class="list-head">
+        <span>假期与自定义提醒</span>
+        <button class="add-btn" id="addBtn" type="button">＋ 添加</button>
+      </div>
+      <div class="list-scroll">
+        <ul class="edit-list" id="editList"></ul>
+      </div>
+
+      <section class="modal-sec">
+        <h3>背景图片</h3>
+        <div class="bg-row">
+          <span class="bg-pre" id="bgPre">每</span>
+          <input class="bg-every" id="bgEvery" type="number" min="1" max="999" step="1" aria-label="更换间隔">
+          <select class="bg-mode" id="bgMode" aria-label="背景更换频率">
+            <option value="minute">分钟</option>
+            <option value="hour">小时</option>
+            <option value="day">天</option>
+            <option value="fixed">固定一张</option>
+          </select>
+          <select class="bg-fixed" id="bgFixed" aria-label="固定使用的背景" hidden></select>
+          <button class="btn btn-ghost btn-mini" id="shuffleBtn" type="button">换一张</button>
+        </div>
+      </section>
+
+      <p class="modal-tip" id="modalTip">
+        「保存修改」只写本机浏览器，不动文件；「保存到文件」会弹出保存框，选中项目里的
+        holidays.config.js 就直接写进去（Chrome / Edge 支持，其它浏览器会下载一份让你替换）。
+      </p>
+      <p class="modal-path" id="modalPath" hidden></p>
+    </div>
+
+    <footer class="modal-foot">
+      <button class="btn btn-ghost" id="resetBtn" type="button">恢复为文件内容</button>
+      <button class="btn btn-ghost" id="exportBtn" type="button">保存到文件</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" type="button" data-close>取消</button>
+      <button class="btn btn-primary" id="saveBtn" type="button">保存修改</button>
+    </footer>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript>
+  <p style="text-align:center;color:#55645b">请开启 JavaScript 以显示倒计时。</p>
+</noscript>
+
+<!-- 农历换算库：内联 solarlunar 3.1.0（农历 1900–2100 数据表），离线可用，无需联网 -->
+<script>
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.solarLunar = {}));
+})(this, (function (exports) { 'use strict';
+
+  /**
+   * 农历 1900-2100 的润大小信息表
+   * @return Array
+   */
+  var lunarInfo = [0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,//1900-1909
+    0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977,//1910-1919
+    0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570, 0x052f2, 0x04970,//1920-1929
+    0x06566, 0x0d4a0, 0x0ea50, 0x06e95, 0x05ad0, 0x02b60, 0x186e3, 0x092e0, 0x1c8d7, 0x0c950,//1930-1939
+    0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0, 0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557,//1940-1949
+    0x06ca0, 0x0b550, 0x15355, 0x04da0, 0x0a5b0, 0x14573, 0x052b0, 0x0a9a8, 0x0e950, 0x06aa0,//1950-1959
+    0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0,//1960-1969
+    0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6,//1970-1979
+    0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570,//1980-1989
+    0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x05ac0, 0x0ab60, 0x096d5, 0x092e0,//1990-1999
+    0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5,//2000-2009
+    0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930,//2010-2019
+    0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530,//2020-2029
+    0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45,//2030-2039
+    0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0,//2040-2049
+    /**Add By JJonline@JJonline.Cn**/
+    0x14b63, 0x09370, 0x049f8, 0x04970, 0x064b0, 0x168a6, 0x0ea50, 0x06b20, 0x1a6c4, 0x0aae0,//2050-2059
+    0x092e0, 0x0d2e3, 0x0c960, 0x0d557, 0x0d4a0, 0x0da50, 0x05d55, 0x056a0, 0x0a6d0, 0x055d4,//2060-2069
+    0x052d0, 0x0a9b8, 0x0a950, 0x0b4a0, 0x0b6a6, 0x0ad50, 0x055a0, 0x0aba4, 0x0a5b0, 0x052b0,//2070-2079
+    0x0b273, 0x06930, 0x07337, 0x06aa0, 0x0ad50, 0x14b55, 0x04b60, 0x0a570, 0x054e4, 0x0d160,//2080-2089
+    0x0e968, 0x0d520, 0x0daa0, 0x16aa6, 0x056d0, 0x04ae0, 0x0a9d4, 0x0a4d0, 0x0d150, 0x0f252,//2090-2099
+    0x0d520];//2100;
+
+  /**
+   * 公历每个月份的天数普通表
+   * @Array Of Property
+   * @return Number
+   */
+  var solarMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+  /**
+   * 天干地支之天干速查表
+   * @Array Of Property trans['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
+   * @return Cn string
+   */
+  var gan = [
+    '\u7532',
+    '\u4e59',
+    '\u4e19',
+    '\u4e01',
+    '\u620a',
+    '\u5df1',
+    '\u5e9a',
+    '\u8f9b',
+    '\u58ec',
+    '\u7678'
+  ];
+
+  /**
+   * 天干地支之地支速查表
+   * @Array Of Property
+   * @trans['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+   * @return Cn string
+   */
+  var zhi = [
+    '\u5b50',
+    '\u4e11',
+    '\u5bc5',
+    '\u536f',
+    '\u8fb0',
+    '\u5df3',
+    '\u5348',
+    '\u672a',
+    '\u7533',
+    '\u9149',
+    '\u620c',
+    '\u4ea5'
+  ];
+
+  /**
+   * 天干地支之地支速查表<=>生肖
+   * @Array Of Property
+   * @trans['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪']
+   * @return Cn string
+   */
+  var animals = [
+    '\u9f20',
+    '\u725b',
+    '\u864e',
+    '\u5154',
+    '\u9f99',
+    '\u86c7',
+    '\u9a6c',
+    '\u7f8a',
+    '\u7334',
+    '\u9e21',
+    '\u72d7',
+    '\u732a'
+  ];
+
+  /**
+   * 24节气速查表
+   * @Array Of Property
+   * @trans['小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种','夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至']
+   * @return Cn string
+   */
+  var lunarTerm = [
+    '\u5c0f\u5bd2', '\u5927\u5bd2', '\u7acb\u6625', '\u96e8\u6c34', '\u60ca\u86f0', '\u6625\u5206', '\u6e05\u660e', '\u8c37\u96e8', '\u7acb\u590f', '\u5c0f\u6ee1', '\u8292\u79cd', '\u590f\u81f3', '\u5c0f\u6691', '\u5927\u6691', '\u7acb\u79cb', '\u5904\u6691', '\u767d\u9732', '\u79cb\u5206', '\u5bd2\u9732', '\u971c\u964d', '\u7acb\u51ac', '\u5c0f\u96ea', '\u5927\u96ea', '\u51ac\u81f3'
+  ];
+
+  /**
+   * 1900-2100各年的24节气日期速查表
+   * @Array Of Property
+   * @return 0x string For splice
+   */
+  var lTermInfo = [
+    '9778397bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e', '97bcf97c3598082c95f8c965cc920f',
+    '97bd0b06bdb0722c965ce1cfcc920f', 'b027097bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e',
+    '97bcf97c359801ec95f8c965cc920f', '97bd0b06bdb0722c965ce1cfcc920f', 'b027097bd097c36b0b6fc9274c91aa',
+    '97b6b97bd19801ec9210c965cc920e', '97bcf97c359801ec95f8c965cc920f', '97bd0b06bdb0722c965ce1cfcc920f',
+    'b027097bd097c36b0b6fc9274c91aa', '9778397bd19801ec9210c965cc920e', '97b6b97bd19801ec95f8c965cc920f',
+    '97bd09801d98082c95f8e1cfcc920f', '97bd097bd097c36b0b6fc9210c8dc2', '9778397bd197c36c9210c9274c91aa',
+    '97b6b97bd19801ec95f8c965cc920e', '97bd09801d98082c95f8e1cfcc920f', '97bd097bd097c36b0b6fc9210c8dc2',
+    '9778397bd097c36c9210c9274c91aa', '97b6b97bd19801ec95f8c965cc920e', '97bcf97c3598082c95f8e1cfcc920f',
+    '97bd097bd097c36b0b6fc9210c8dc2', '9778397bd097c36c9210c9274c91aa', '97b6b97bd19801ec9210c965cc920e',
+    '97bcf97c3598082c95f8c965cc920f', '97bd097bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa',
+    '97b6b97bd19801ec9210c965cc920e', '97bcf97c3598082c95f8c965cc920f', '97bd097bd097c35b0b6fc920fb0722',
+    '9778397bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e', '97bcf97c359801ec95f8c965cc920f',
+    '97bd097bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e',
+    '97bcf97c359801ec95f8c965cc920f', '97bd097bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa',
+    '97b6b97bd19801ec9210c965cc920e', '97bcf97c359801ec95f8c965cc920f', '97bd097bd07f595b0b6fc920fb0722',
+    '9778397bd097c36b0b6fc9210c8dc2', '9778397bd19801ec9210c9274c920e', '97b6b97bd19801ec95f8c965cc920f',
+    '97bd07f5307f595b0b0bc920fb0722', '7f0e397bd097c36b0b6fc9210c8dc2', '9778397bd097c36c9210c9274c920e',
+    '97b6b97bd19801ec95f8c965cc920f', '97bd07f5307f595b0b0bc920fb0722', '7f0e397bd097c36b0b6fc9210c8dc2',
+    '9778397bd097c36c9210c9274c91aa', '97b6b97bd19801ec9210c965cc920e', '97bd07f1487f595b0b0bc920fb0722',
+    '7f0e397bd097c36b0b6fc9210c8dc2', '9778397bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e',
+    '97bcf7f1487f595b0b0bb0b6fb0722', '7f0e397bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa',
+    '97b6b97bd19801ec9210c965cc920e', '97bcf7f1487f595b0b0bb0b6fb0722', '7f0e397bd097c35b0b6fc920fb0722',
+    '9778397bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e', '97bcf7f1487f531b0b0bb0b6fb0722',
+    '7f0e397bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa', '97b6b97bd19801ec9210c965cc920e',
+    '97bcf7f1487f531b0b0bb0b6fb0722', '7f0e397bd07f595b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa',
+    '97b6b97bd19801ec9210c9274c920e', '97bcf7f0e47f531b0b0bb0b6fb0722', '7f0e397bd07f595b0b0bc920fb0722',
+    '9778397bd097c36b0b6fc9210c91aa', '97b6b97bd197c36c9210c9274c920e', '97bcf7f0e47f531b0b0bb0b6fb0722',
+    '7f0e397bd07f595b0b0bc920fb0722', '9778397bd097c36b0b6fc9210c8dc2', '9778397bd097c36c9210c9274c920e',
+    '97b6b7f0e47f531b0723b0b6fb0722', '7f0e37f5307f595b0b0bc920fb0722', '7f0e397bd097c36b0b6fc9210c8dc2',
+    '9778397bd097c36b0b70c9274c91aa', '97b6b7f0e47f531b0723b0b6fb0721', '7f0e37f1487f595b0b0bb0b6fb0722',
+    '7f0e397bd097c35b0b6fc9210c8dc2', '9778397bd097c36b0b6fc9274c91aa', '97b6b7f0e47f531b0723b0b6fb0721',
+    '7f0e27f1487f595b0b0bb0b6fb0722', '7f0e397bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa',
+    '97b6b7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e397bd097c35b0b6fc920fb0722',
+    '9778397bd097c36b0b6fc9274c91aa', '97b6b7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722',
+    '7f0e397bd097c35b0b6fc920fb0722', '9778397bd097c36b0b6fc9274c91aa', '97b6b7f0e47f531b0723b0b6fb0721',
+    '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e397bd07f595b0b0bc920fb0722', '9778397bd097c36b0b6fc9274c91aa',
+    '97b6b7f0e47f531b0723b0787b0721', '7f0e27f0e47f531b0b0bb0b6fb0722', '7f0e397bd07f595b0b0bc920fb0722',
+    '9778397bd097c36b0b6fc9210c91aa', '97b6b7f0e47f149b0723b0787b0721', '7f0e27f0e47f531b0723b0b6fb0722',
+    '7f0e397bd07f595b0b0bc920fb0722', '9778397bd097c36b0b6fc9210c8dc2', '977837f0e37f149b0723b0787b0721',
+    '7f07e7f0e47f531b0723b0b6fb0722', '7f0e37f5307f595b0b0bc920fb0722', '7f0e397bd097c35b0b6fc9210c8dc2',
+    '977837f0e37f14998082b0787b0721', '7f07e7f0e47f531b0723b0b6fb0721', '7f0e37f1487f595b0b0bb0b6fb0722',
+    '7f0e397bd097c35b0b6fc9210c8dc2', '977837f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721',
+    '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e397bd097c35b0b6fc920fb0722', '977837f0e37f14998082b0787b06bd',
+    '7f07e7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e397bd097c35b0b6fc920fb0722',
+    '977837f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722',
+    '7f0e397bd07f595b0b0bc920fb0722', '977837f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721',
+    '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e397bd07f595b0b0bc920fb0722', '977837f0e37f14998082b0787b06bd',
+    '7f07e7f0e47f149b0723b0787b0721', '7f0e27f0e47f531b0b0bb0b6fb0722', '7f0e397bd07f595b0b0bc920fb0722',
+    '977837f0e37f14998082b0723b06bd', '7f07e7f0e37f149b0723b0787b0721', '7f0e27f0e47f531b0723b0b6fb0722',
+    '7f0e397bd07f595b0b0bc920fb0722', '977837f0e37f14898082b0723b02d5', '7ec967f0e37f14998082b0787b0721',
+    '7f07e7f0e47f531b0723b0b6fb0722', '7f0e37f1487f595b0b0bb0b6fb0722', '7f0e37f0e37f14898082b0723b02d5',
+    '7ec967f0e37f14998082b0787b0721', '7f07e7f0e47f531b0723b0b6fb0722', '7f0e37f1487f531b0b0bb0b6fb0722',
+    '7f0e37f0e37f14898082b0723b02d5', '7ec967f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721',
+    '7f0e37f1487f531b0b0bb0b6fb0722', '7f0e37f0e37f14898082b072297c35', '7ec967f0e37f14998082b0787b06bd',
+    '7f07e7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e37f0e37f14898082b072297c35',
+    '7ec967f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722',
+    '7f0e37f0e366aa89801eb072297c35', '7ec967f0e37f14998082b0787b06bd', '7f07e7f0e47f149b0723b0787b0721',
+    '7f0e27f1487f531b0b0bb0b6fb0722', '7f0e37f0e366aa89801eb072297c35', '7ec967f0e37f14998082b0723b06bd',
+    '7f07e7f0e47f149b0723b0787b0721', '7f0e27f0e47f531b0723b0b6fb0722', '7f0e37f0e366aa89801eb072297c35',
+    '7ec967f0e37f14998082b0723b06bd', '7f07e7f0e37f14998083b0787b0721', '7f0e27f0e47f531b0723b0b6fb0722',
+    '7f0e37f0e366aa89801eb072297c35', '7ec967f0e37f14898082b0723b02d5', '7f07e7f0e37f14998082b0787b0721',
+    '7f07e7f0e47f531b0723b0b6fb0722', '7f0e36665b66aa89801e9808297c35', '665f67f0e37f14898082b0723b02d5',
+    '7ec967f0e37f14998082b0787b0721', '7f07e7f0e47f531b0723b0b6fb0722', '7f0e36665b66a449801e9808297c35',
+    '665f67f0e37f14898082b0723b02d5', '7ec967f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721',
+    '7f0e36665b66a449801e9808297c35', '665f67f0e37f14898082b072297c35', '7ec967f0e37f14998082b0787b06bd',
+    '7f07e7f0e47f531b0723b0b6fb0721', '7f0e26665b66a449801e9808297c35', '665f67f0e37f1489801eb072297c35',
+    '7ec967f0e37f14998082b0787b06bd', '7f07e7f0e47f531b0723b0b6fb0721', '7f0e27f1487f531b0b0bb0b6fb0722'
+  ];
+
+  /**
+   * 数字转中文速查表
+   * @Array Of Property
+   * @trans ['日','一','二','三','四','五','六','七','八','九','十']
+   * @return Cn string
+   */
+  var nStr1 = [
+    '\u65e5',
+    '\u4e00',
+    '\u4e8c',
+    '\u4e09',
+    '\u56db',
+    '\u4e94',
+    '\u516d',
+    '\u4e03',
+    '\u516b',
+    '\u4e5d',
+    '\u5341'
+  ];
+
+  /**
+   * 日期转农历称呼速查表
+   * @Array Of Property
+   * @trans ['初','十','廿','卅']
+   * @return Cn string
+   */
+  var nStr2 = ['\u521d', '\u5341', '\u5eff', '\u5345'];
+
+  /**
+   * 月份转农历称呼速查表
+   * @Array Of Property
+   * @trans ['正','一','二','三','四','五','六','七','八','九','十','冬','腊']
+   * @return Cn string
+   */
+  var nStr3 = [
+    '\u6b63',
+    '\u4e8c',
+    '\u4e09',
+    '\u56db',
+    '\u4e94',
+    '\u516d',
+    '\u4e03',
+    '\u516b',
+    '\u4e5d',
+    '\u5341',
+    '\u51ac',
+    '\u814a'
+  ];
+
+  /**
+   * 年份数字转中文速查表
+   * @Array Of Property
+   * @trans ['零','一','二','三','四','五','六','七','八','九','十']
+   * @return Cn string
+   */
+  var nStr4 = [
+    '\u96f6',
+    '\u4e00',
+    '\u4e8c',
+    '\u4e09',
+    '\u56db',
+    '\u4e94',
+    '\u516d',
+    '\u4e03',
+    '\u516b',
+    '\u4e5d',
+    '\u5341'
+  ];
+
+  /**
+   * @1900-2100区间内的公历、农历互转
+   * @charset  UTF-8
+   * @author  Ajing(JJonline@JJonline.Cn), Modernized by OpenCode
+   * @Time  2014-7-21
+   * @Version  $ID$
+   * @公历转农历：solarLunar.solar2lunar(1987,11,01); //[you can ignore params of prefix 0]
+   * @农历转公历：solarLunar.lunar2solar(1987,09,10); //[you can ignore params of prefix 0]
+   * @link http://blog.jjonline.cn/userInterFace/173.html
+   */
+
+
+  const solarLunar = {
+    lunarInfo,
+    solarMonth,
+    gan,
+    zhi,
+    animals,
+    lunarTerm,
+    lTermInfo,
+    nStr1,
+    nStr2,
+    nStr3,
+    nStr4,
+
+    /**
+     * 返回农历y年一整年的总天数
+     * @param {number} y - lunar Year
+     * @returns {number}
+     * @eg:var count = solarLunar.lYearDays(1987) ;//count=387
+     */
+    lYearDays(y) {
+      let sum = 348;
+      const info = lunarInfo[y - 1900];
+      // 优化：直接计算位数，减少循环
+      sum += info & 0x8000 ? 1 : 0;
+      sum += info & 0x4000 ? 1 : 0;
+      sum += info & 0x2000 ? 1 : 0;
+      sum += info & 0x1000 ? 1 : 0;
+      sum += info & 0x0800 ? 1 : 0;
+      sum += info & 0x0400 ? 1 : 0;
+      sum += info & 0x0200 ? 1 : 0;
+      sum += info & 0x0100 ? 1 : 0;
+      sum += info & 0x0080 ? 1 : 0;
+      sum += info & 0x0040 ? 1 : 0;
+      sum += info & 0x0020 ? 1 : 0;
+      sum += info & 0x0010 ? 1 : 0;
+      return sum + solarLunar.leapDays(y);
+    },
+
+    /**
+     * 返回农历y年闰月是哪个月；若y年没有闰月 则返回0
+     * @param {number} y - lunar Year
+     * @returns {number} (0-12)
+     * @eg:var leapMonth = solarLunar.leapMonth(1987) ;//leapMonth=6
+     */
+    leapMonth(y) {
+      //闰字编码 \u95f0
+      return lunarInfo[y - 1900] & 0xf;
+    },
+
+    /**
+     * 返回农历y年闰月的天数 若该年没有闰月则返回0
+     * @param {number} y - lunar Year
+     * @returns {number} (0、29、30)
+     * @eg:var leapMonthDay = solarLunar.leapDays(1987) ;//leapMonthDay=29
+     */
+    leapDays(y) {
+      if (solarLunar.leapMonth(y)) {
+        return lunarInfo[y - 1900] & 0x10000 ? 30 : 29;
+      }
+      return 0;
+    },
+
+    /**
+     * 返回农历 y 年 m 月（非闰月）的总天数，计算 m 为闰月时的天数请使用 leapDays 方法
+     * @param {number} y - lunar Year
+     * @param {number} m - lunar Month
+     * @returns {number} (-1、29、30)
+     * @eg:var MonthDay = solarLunar.monthDays(1987,9) ;//MonthDay=29
+     */
+    monthDays(y, m) {
+      if (m > 12 || m < 1) {
+        return -1;
+      } //月份参数从1至12，参数错误返回-1
+      return lunarInfo[y - 1900] & (0x10000 >> m) ? 30 : 29;
+    },
+
+    /**
+     * 获取时辰干支
+     * @param {number} h - 公历小时 (0-23)
+     * @param {number} dayGanIndex - 日干索引 (0-9)，0=甲，1=乙，...，9=癸
+     * @returns {string} 时辰干支，如 "甲子"
+     * @eg:var shichen = solarLunar.getShiChen(23, 0); // 23:00 的子时，日干为甲时
+     */
+    getShiChen(h, dayGanIndex) {
+      const hourZhiIndex = (h + 1) / 2 >= 24 ? 0 : Math.floor((h + 1) / 2) % 12;
+      const hourGanIndex = (dayGanIndex * 2 + hourZhiIndex) % 10;
+      return gan[hourGanIndex] + zhi[hourZhiIndex];
+    },
+
+    /**
+     * 返回公历(!)y年m月的天数
+     * @param {number} y - solar Year
+     * @param {number} m - solar Month
+     * @returns {number} (-1、28、29、30、31)
+     * @eg:var solarMonthDay = solarLunar.solarDays(1987) ;//solarMonthDay=30
+     */
+    solarDays(y, m) {
+      if (m > 12 || m < 1) {
+        return -1;
+      } //若参数错误 返回-1
+      const ms = m - 1;
+      if (ms === 1) {
+        //2月份的闰平规律测算后确认返回28或29
+        return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28;
+      } else {
+        return solarMonth[ms];
+      }
+    },
+
+    /**
+     * 传入offset偏移量返回干支
+     * @param {number} offset - 相对甲子的偏移量
+     * @returns {string} Cn string
+     */
+    toGanZhi(offset) {
+      return gan[offset % 10] + zhi[offset % 12];
+    },
+
+    /**
+     * 传入公历(!) y 年获得该年第 n 个节气的公历日期
+     * @param {number} y - 公历年(1900-2100)；n二十四节气中的第几个节气(1~24)；从n=1(小寒)算起
+     * @param {number} n - 二十四节气中的第几个节气(1~24)
+     * @returns {number}
+     * @eg:var _24 = solarLunar.getTerm(1987,3) ;//_24=4;意即1987年2月4日立春
+     */
+    getTerm(y, n) {
+      if (y < 1900 || y > 2100) {
+        return -1;
+      }
+      if (n < 1 || n > 24) {
+        return -1;
+      }
+      const _table = lTermInfo[y - 1900];
+      const _info = [
+        parseInt('0x' + _table.substr(0, 5)).toString(),
+        parseInt('0x' + _table.substr(5, 5)).toString(),
+        parseInt('0x' + _table.substr(10, 5)).toString(),
+        parseInt('0x' + _table.substr(15, 5)).toString(),
+        parseInt('0x' + _table.substr(20, 5)).toString(),
+        parseInt('0x' + _table.substr(25, 5)).toString(),
+      ];
+      const _calDay = [
+        _info[0].substr(0, 1),
+        _info[0].substr(1, 2),
+        _info[0].substr(3, 1),
+        _info[0].substr(4, 2),
+
+        _info[1].substr(0, 1),
+        _info[1].substr(1, 2),
+        _info[1].substr(3, 1),
+        _info[1].substr(4, 2),
+
+        _info[2].substr(0, 1),
+        _info[2].substr(1, 2),
+        _info[2].substr(3, 1),
+        _info[2].substr(4, 2),
+
+        _info[3].substr(0, 1),
+        _info[3].substr(1, 2),
+        _info[3].substr(3, 1),
+        _info[3].substr(4, 2),
+
+        _info[4].substr(0, 1),
+        _info[4].substr(1, 2),
+        _info[4].substr(3, 1),
+        _info[4].substr(4, 2),
+
+        _info[5].substr(0, 1),
+        _info[5].substr(1, 2),
+        _info[5].substr(3, 1),
+        _info[5].substr(4, 2),
+      ];
+      return parseInt(_calDay[n - 1]);
+    },
+
+    /**
+     * 传入农历年份数字返回汉语通俗表示法
+     * @param {number} y - lunar year
+     * @returns {string}
+     * @eg:
+     */
+    toChinaYear(y) {
+      //年 => \u5E74
+      const oxxx = Math.floor(y / 1000);
+      const xoxx = Math.floor((y % 1000) / 100);
+      const xxox = Math.floor((y % 100) / 10);
+      const xxxo = y % 10;
+
+      return nStr4[oxxx] + nStr4[xoxx] + nStr4[xxox] + nStr4[xxxo] + '\u5E74';
+    },
+
+    /**
+     * 传入农历数字月份返回汉语通俗表示法
+     * @param {number} m - lunar month
+     * @returns {string}
+     * @eg:var cnMonth = solarLunar.toChinaMonth(12) ;//cnMonth='腊月'
+     */
+    toChinaMonth(m) {
+      // 月 => \u6708
+      if (m > 12 || m < 1) {
+        return -1;
+      } //若参数错误 返回-1
+      let s = nStr3[m - 1];
+      s += '\u6708'; //加上月字
+      return s;
+    },
+
+    /**
+     * 传入农历日期数字返回汉字表示法
+     * @param {number} d - lunar day
+     * @returns {string} Cn string
+     * @eg:var cnDay = solarLunar.toChinaDay(21) ;//cnMonth='廿一'
+     */
+    toChinaDay(d) {
+      //日 => \u65e5
+      let s = '';
+      switch (d) {
+      case 10:
+        s = '\u521d\u5341';
+        break;
+      case 20:
+        s = '\u4e8c\u5341';
+        break;
+      case 30:
+        s = '\u4e09\u5341';
+        break;
+      default:
+        s = nStr2[Math.floor(d / 10)];
+        s += nStr1[d % 10];
+      }
+      return s;
+    },
+
+    /**
+     * 年份转生肖 => 精确划分生肖分界线是"立春"
+     * @param {number} y - year
+     * @param {number} [m] - month (可选，用于精确计算)
+     * @param {number} [d] - day (可选，用于精确计算)
+     * @returns {string} Cn string
+     * @eg:var animal = solarLunar.getAnimal(1987) ;//animal='兔'
+     */
+    getAnimal(y, m, d) {
+      // 如果提供了月日参数，基于立春进行精确计算
+      if (m !== undefined && d !== undefined) {
+        const term3 = solarLunar.getTerm(y, 3); // 立春日期
+        // 如果日期在立春之前，则生肖按上一年计算
+        if (m < 2 || (m === 2 && d < term3)) {
+          y = y - 1;
+        }
+      }
+      return animals[(y - 4) % 12];
+    },
+
+    /**
+     * 传入公历年月日获得详细的公历、农历object信息 <=>JSON
+     * @param {number} y - solar year
+     * @param {number} m - solar month
+     * @param {number} d - solar day
+     * @returns {object} JSON object
+     * @eg:console.log(solarLunar.solar2lunar(1987,11,01));
+     */
+    solar2lunar(y, m, d) {
+      //参数区间1900.1.31~2100.12.31
+      // 输入验证
+      if (y == null || m == null || d == null) {
+        const objDate = new Date();
+        y = objDate.getFullYear();
+        m = objDate.getMonth() + 1;
+        d = objDate.getDate();
+      }
+
+      // 类型转换和验证
+      y = Number(y);
+      m = Number(m);
+      d = Number(d);
+
+      if (isNaN(y) || isNaN(m) || isNaN(d)) {
+        return -1;
+      }
+
+      if (y < 1900 || y > 2100) {
+        return -1;
+      } //年份限定、上限
+      if (y === 1900 && m === 1 && d < 31) {
+        return -1;
+      } //下限
+
+      // 验证月份和日期的有效性
+      if (m < 1 || m > 12) {
+        return -1;
+      }
+      const maxDay = solarLunar.solarDays(y, m);
+      if (d < 1 || d > maxDay) {
+        return -1;
+      }
+
+      const objDate = new Date(y, parseInt(m) - 1, d);
+      let i,
+        temp = 0;
+      //修正ymd参数
+      y = objDate.getFullYear();
+      m = objDate.getMonth() + 1;
+      d = objDate.getDate();
+      let offset =
+        (Date.UTC(objDate.getFullYear(), objDate.getMonth(), objDate.getDate()) -
+          Date.UTC(1900, 0, 31)) /
+        86400000;
+
+      // 使用原有的线性搜索算法以保持兼容性，但修复变量重声明问题
+      temp = 0;
+      for (i = 1900; i < 2101 && offset > 0; i++) {
+        temp = solarLunar.lYearDays(i);
+        offset -= temp;
+      }
+      if (offset < 0) {
+        offset += temp;
+        i--;
+      }
+
+      const finalYear = i;
+
+      //是否今天
+      const isTodayObj = new Date();
+      let isToday = false;
+      if (
+        isTodayObj.getFullYear() === y &&
+        isTodayObj.getMonth() + 1 === m &&
+        isTodayObj.getDate() === d
+      ) {
+        isToday = true;
+      }
+      //星期几
+      const nWeek = objDate.getDay();
+      const cWeek = nStr1[nWeek];
+      const nWeekAdjusted = nWeek === 0 ? 7 : nWeek; //数字表示周几顺应天朝周一开始的惯例
+
+      //农历年
+      const year = finalYear;
+
+      const leapMonth = solarLunar.leapMonth(finalYear); //闰哪个月
+
+      let isLeap = false;
+
+      //效验闰月
+      for (i = 1; i < 13 && offset > 0; i++) {
+        //闰月
+        if (leapMonth > 0 && i === leapMonth + 1 && isLeap === false) {
+          --i;
+          isLeap = true;
+          temp = solarLunar.leapDays(year); //计算农历闰月天数
+        } else {
+          temp = solarLunar.monthDays(year, i); //计算农历普通月天数
+        }
+        //解除闰月
+        if (isLeap === true && i === leapMonth + 1) {
+          isLeap = false;
+        }
+        offset -= temp;
+      }
+
+      if (offset === 0 && leapMonth > 0 && i === leapMonth + 1) {
+        if (isLeap) {
+          isLeap = false;
+        } else {
+          isLeap = true;
+          --i;
+        }
+      }
+      if (offset < 0) {
+        offset += temp;
+        --i;
+      }
+      //农历月
+      const month = i;
+      //农历日
+      const day = offset + 1;
+
+      //天干地支处理
+      // 注意：干支年以立春为分界线，这是中国传统历法
+      // 立春通常在2月3-5日之间，立春之前出生的人，干支属上一年
+      const sm = m - 1;
+      const term3 = solarLunar.getTerm(y, 3); //该公历年立春日期
+      let gzY = solarLunar.toGanZhi(y - 4); //普通按年份计算，下方尚需按立春节气来修正
+      //依据立春日进行修正gzY
+      // 立春通常在2月3-5日之间，如果日期早于立春，应按上一年计算
+      if (m < 2 || (m === 2 && d < term3)) {
+        gzY = solarLunar.toGanZhi(y - 1 - 4);
+      }
+
+      //月柱 1900年1月小寒以前为 丙子月(60进制12)
+      const firstNode = solarLunar.getTerm(y, m * 2 - 1); //返回当月「节」为几日开始
+      const secondNode = solarLunar.getTerm(y, m * 2); //返回当月「节」为几日开始
+
+      //依据12节气修正干支月
+      // 使用原始的正确算法：年干支索引*12 + 月份 + 偏移
+      let gzM = solarLunar.toGanZhi((y - 1900) * 12 + m + 11);
+      if (d >= firstNode) {
+        gzM = solarLunar.toGanZhi((y - 1900) * 12 + m + 12);
+      }
+
+      //传入的日期的节气与否
+      let isTerm = false;
+      let term = '';
+      if (firstNode === d) {
+        isTerm = true;
+        term = lunarTerm[m * 2 - 2];
+      }
+      if (secondNode === d) {
+        isTerm = true;
+        term = lunarTerm[m * 2 - 1];
+      }
+      //日柱 当月一日与 1900/1/1 相差天数
+      const dayCyclical = Date.UTC(y, sm, 1, 0, 0, 0, 0) / 86400000 + 25567 + 10;
+      const gzD = solarLunar.toGanZhi(dayCyclical + d - 1);
+      return {
+        lYear: year,
+        lMonth: month,
+        lDay: day,
+        animal: solarLunar.getAnimal(year),
+        yearCn: solarLunar.toChinaYear(year),
+        monthCn: (isLeap && leapMonth === month ? '\u95f0' : '') + solarLunar.toChinaMonth(month),
+        dayCn: solarLunar.toChinaDay(day),
+        cYear: y,
+        cMonth: m,
+        cDay: d,
+        gzYear: gzY,
+        gzMonth: gzM,
+        gzDay: gzD,
+        isToday,
+        isLeap,
+        nWeek: nWeekAdjusted, //数字表示周几顺应天朝周一开始的惯例
+        ncWeek: '\u661f\u671f' + cWeek,
+        isTerm,
+        term,
+      };
+    },
+
+    /**
+     * 传入公历年月日以及传入的月份是否闰月获得详细的公历、农历object信息 <=>JSON
+     * @param {number} y - lunar year
+     * @param {number} m - lunar month
+     * @param {number} d - lunar day
+     * @param {boolean} isLeapMonth - lunar month is leap or not.
+     * @returns {object} JSON object
+     * @eg:console.log(solarLunar.lunar2solar(1987,9,10));
+     */
+    lunar2solar(y, m, d, isLeapMonth) {
+      //参数区间1900.1.31~2100.12.1
+      // 输入验证
+      y = Number(y);
+      m = Number(m);
+      d = Number(d);
+      isLeapMonth = Boolean(isLeapMonth); // 确保是布尔值
+
+      if (isNaN(y) || isNaN(m) || isNaN(d)) {
+        return -1;
+      }
+      const leapMonth = solarLunar.leapMonth(y);
+      if (isLeapMonth && leapMonth !== m) {
+        return -1;
+      } //传参要求计算该闰月公历 但该年得出的闰月与传参的月份并不同
+      if ((y === 2100 && m === 12 && d > 1) || (y === 1900 && m === 1 && d < 31)) {
+        return -1;
+      } //超出了最大极限值
+      const day = solarLunar.monthDays(y, m);
+      if (y < 1900 || y > 2100 || d > day) {
+        return -1;
+      } //参数合法性效验
+
+      //计算农历的时间差
+      let offset = 0;
+      for (let i = 1900; i < y; i++) {
+        offset += solarLunar.lYearDays(i);
+      }
+      let leap = 0,
+        isAdd = false;
+      for (let i = 1; i < m; i++) {
+        leap = solarLunar.leapMonth(y);
+        if (!isAdd) {
+          //处理闰月
+          if (leap <= i && leap > 0) {
+            offset += solarLunar.leapDays(y);
+            isAdd = true;
+          }
+        }
+        offset += solarLunar.monthDays(y, i);
+      }
+      //转换闰月农历 需补充该年闰月的前一个月的时差
+      if (isLeapMonth) {
+        offset += day;
+      }
+      //1900年农历正月一日的公历时间为1900年1月30日0时0分0秒(该时间也是本农历的最开始起始点)
+      const stmap = Date.UTC(1900, 1, 30, 0, 0, 0);
+      const calObj = new Date((offset + d - 31) * 86400000 + stmap);
+      const cY = calObj.getUTCFullYear();
+      const cM = calObj.getUTCMonth() + 1;
+      const cD = calObj.getUTCDate();
+
+      return solarLunar.solar2lunar(cY, cM, cD);
+    },
+
+    /**
+     * 获取指定日期的传统节日
+     * @param {number} year - 公历年
+     * @param {number} month - 公历月
+     * @param {number} day - 公历日
+     * @returns {string[]} 传统节日数组
+     */
+    getFestivals(year, month, day) {
+      const festivals = [];
+      const lunar = solarLunar.solar2lunar(year, month, day);
+      if (lunar === -1) return festivals;
+
+      const { lMonth, lDay } = lunar;
+
+      const fixedFestivals = {
+        '1-1': '春节',
+        '1-15': '元宵节',
+        '5-5': '端午节',
+        '7-7': '七夕节',
+        '8-15': '中秋节',
+        '9-9': '重阳节',
+        '12-8': '腊八节',
+        '12-23': '小年',
+      };
+
+      const key = `${lMonth}-${lDay}`;
+      if (fixedFestivals[key]) {
+        festivals.push(fixedFestivals[key]);
+      }
+
+      if (lMonth === 1 && lDay === 1) {
+        festivals.push('农历新年');
+      }
+
+      if (solarLunar.customFestivals) {
+        solarLunar.customFestivals.forEach((f) => {
+          if (f.month === lMonth && f.day === lDay) {
+            festivals.push(f.name);
+          }
+        });
+      }
+
+      return festivals;
+    },
+
+    /**
+     * 添加自定义农历节日
+     * @param {string} name - 节日名称
+     * @param {number} month - 农历月
+     * @param {number} day - 农历日
+     */
+    addFestival(name, month, day) {
+      if (!solarLunar.customFestivals) {
+        solarLunar.customFestivals = [];
+      }
+      solarLunar.customFestivals.push({ name, month, day });
+    },
+
+    /**
+     * 清除所有自定义节日
+     */
+    clearFestivals() {
+      solarLunar.customFestivals = [];
+    },
+  };
+
+  exports.default = solarLunar;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
+
+}));
+</script>
+
+<!-- 本地配置文件：假期修正、自定义提醒、背景图名单与轮换，全部在这一个文件里 -->
+<script src="holidays.config.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     ① 基础配置（改这里即可）
+     ========================================================= */
+  var CONFIG = {
+    upcomingCount: 6,                  // 展示多少个即将到来的节日（≥5）
+    backgroundDir: 'backgrounds/',     // 背景图目录
+    // 背景名单优先读 holidays.config.js 的 backgrounds；没有名单时才尝试这些默认文件名
+    backgroundProbe: [
+      'bg-1.jpg', 'bg-2.jpg', 'bg-3.jpg',
+      'bg-4.jpg', 'bg-5.jpg', 'bg-6.jpg',
+      'bg-1.png', 'bg-2.png'
+    ],
+    storageKey: 'holiday-countdown:bg'
+  };
+
+  var WEEK = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  /* 弹窗里空间紧，结束日期用「周五」这种短写法 */
+  var WEEK_SHORT = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  var ORDER = ['元旦', '春节', '清明', '劳动节', '端午', '中秋', '国庆'];
+  var LABEL = {
+    元旦: '元旦', 春节: '春节', 清明: '清明',
+    劳动节: '劳动节', 端午: '端午', 中秋: '中秋', 国庆: '国庆'
+  };
+  var CHIP = { rule: '推算', config: '手动', custom: '自定义' };
+
+  /* =========================================================
+     ② 法定节假日：假期首日 + 放假天数
+        —— 已内置最近三年（2024–2026 国务院办公厅安排）
+        —— 其余年份按下方 RULES 推算
+     ========================================================= */
+  var OFFICIAL = {
+    2024: [
+      ['元旦', '2023-12-30', 3],   // 1月1日放假，与周末连休
+      ['春节', '2024-02-10', 8],
+      ['清明', '2024-04-04', 3],
+      ['劳动节', '2024-05-01', 5],
+      ['端午', '2024-06-08', 3],   // 6月10日放假，与周末连休
+      ['中秋', '2024-09-15', 3],
+      ['国庆', '2024-10-01', 7]
+    ],
+    2025: [
+      ['元旦', '2025-01-01', 1],
+      ['春节', '2025-01-28', 8],
+      ['清明', '2025-04-04', 3],
+      ['劳动节', '2025-05-01', 5],
+      ['端午', '2025-05-31', 3],
+      ['中秋', '2025-10-06', 1],   // 与国庆连休（10月1日至8日）
+      ['国庆', '2025-10-01', 8]
+    ],
+    2026: [
+      ['元旦', '2026-01-01', 3],
+      ['春节', '2026-02-15', 9],
+      ['清明', '2026-04-04', 3],
+      ['劳动节', '2026-05-01', 5],
+      ['端午', '2026-06-19', 3],
+      ['中秋', '2026-09-25', 3],
+      ['国庆', '2026-10-01', 7]
+    ]
+  };
+
+  /* 未收录年份的推算规则
+     solar：固定公历日；lunar：农历；eve：除夕；term：清明节气
+     days 为参考近年惯例的放假天数，可按需调整 */
+  var RULES = {
+    元旦:   { rule: 'solar', month: 1,  day: 1,  days: 3 },
+    春节:   { rule: 'eve',                       days: 8 },
+    清明:   { rule: 'term',                      days: 3 },
+    劳动节: { rule: 'solar', month: 5,  day: 1,  days: 5 },
+    端午:   { rule: 'lunar', month: 5,  day: 5,  days: 3 },
+    中秋:   { rule: 'lunar', month: 8,  day: 15, days: 3 },
+    国庆:   { rule: 'solar', month: 10, day: 1,  days: 7 }
+  };
+
+  /* =========================================================
+     ③ 工具
+     ========================================================= */
+  var Lunar = (function () {
+    try {
+      var lib = window.solarLunar;
+      var api = lib && (lib.default || lib);
+      return api && typeof api.solar2lunar === 'function' ? api : null;
+    } catch (e) { return null; }
+  })();
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  function parseISO(s) {
+    var p = String(s).split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+
+  function dayNumber(d) {
+    return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+  }
+
+  function today() {
+    var n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  }
+
+  function solarToLunar(y, m, d) {
+    if (!Lunar) return null;
+    try { return Lunar.solar2lunar(y, m, d) || null; } catch (e) { return null; }
+  }
+
+  function lunarToDate(y, m, d) {
+    if (!Lunar) return null;
+    try {
+      var r = Lunar.lunar2solar(y, m, d);
+      if (!r || typeof r === 'number' || !r.cYear) return null;
+      return new Date(r.cYear, r.cMonth - 1, r.cDay);
+    } catch (e) { return null; }
+  }
+
+  function qingmingDay(y) {
+    if (!Lunar) return null;
+    try {
+      var d = Lunar.getTerm(y, 7);           // 第 7 个节气 = 清明
+      return typeof d === 'number' && d > 0 ? d : null;
+    } catch (e) { return null; }
+  }
+
+  /* =========================================================
+     ④ 本地配置
+        优先级：本机保存 > holidays.config.js > 内置官方表 > 规则推算
+        结构：{ years, hidden, custom, backgrounds, background }
+        —— 背景图名单也在同一个文件里，不再需要 backgrounds/manifest.js
+     ========================================================= */
+  var CONFIG_KEY = 'holiday-countdown:config';
+  var FILE_CONFIG = normalizeConfig(window.HOLIDAY_CONFIG);
+  var ACTIVE_CONFIG = mergeConfig(FILE_CONFIG, readLocalConfig());
+
+  function defaultBackground() {
+    return { mode: 'day', every: 1, fixed: '' };
+  }
+
+  function normalizeBackground(raw) {
+    var b = defaultBackground();
+    if (!raw || typeof raw !== 'object') return b;
+
+    if (raw.mode === 'minute' || raw.mode === 'hour' || raw.mode === 'day' || raw.mode === 'fixed') {
+      b.mode = raw.mode;
+    }
+    var every = Math.round(+raw.every);
+    if (isFinite(every) && every >= 1 && every <= 999) b.every = every;
+    if (typeof raw.fixed === 'string' && raw.fixed) b.fixed = raw.fixed;
+
+    return b;
+  }
+
+  /* 背景名单：允许写文件名或 backgrounds/xxx，统一存成文件名 */
+  function normalizeBackgrounds(raw) {
+    if (!Array.isArray(raw)) return [];
+
+    var dir = CONFIG.backgroundDir;
+    var out = [];
+
+    raw.forEach(function (n) {
+      if (typeof n !== 'string') return;
+
+      n = n.trim().replace(/^\.?\//, '');
+      if (dir && n.indexOf(dir) === 0) n = n.slice(dir.length);
+      if (n) out.push(n);
+    });
+
+    return out;
+  }
+
+  function normalizeCustom(c) {
+    if (!c || !c.name) return null;
+
+    var start = String(c.start || '');
+    var days = Math.round(+c.days);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return null;
+    if (!isFinite(days) || days < 1 || days > 30) days = 1;
+
+    return {
+      id: String(c.id || ('c' + Math.random().toString(36).slice(2, 8))),
+      name: String(c.name).slice(0, 12),
+      start: start,
+      days: days,
+      yearly: !!c.yearly
+    };
+  }
+
+  function normalizeConfig(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+
+    var out = {
+      years: {},
+      hidden: [],
+      custom: [],
+      background: normalizeBackground(raw.background),
+      backgrounds: normalizeBackgrounds(raw.backgrounds),
+      hasYears: Array.isArray(raw.years) || (!!raw.years && typeof raw.years === 'object'),
+      hasHidden: Array.isArray(raw.hidden),
+      hasCustom: Array.isArray(raw.custom),
+      hasBackground: !!raw.background,
+      count: 0
+    };
+
+    var src = raw.years || {};
+    Object.keys(src).forEach(function (k) {
+      if (!Array.isArray(src[k])) return;
+
+      src[k].forEach(function (r) {
+        if (!r || !r.name) return;
+
+        var start = String(r.start || '');
+        var days = Math.round(+r.days);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return;
+        if (!isFinite(days) || days < 1 || days > 30) return;
+
+        var y = start.slice(0, 4);
+        (out.years[y] = out.years[y] || []).push({
+          name: String(r.name).slice(0, 12),
+          start: start,
+          days: days
+        });
+        out.count++;
+      });
+    });
+
+    (raw.hidden || []).forEach(function (n) {
+      if (typeof n === 'string' && n && out.hidden.indexOf(n) === -1) out.hidden.push(n);
+    });
+
+    (raw.custom || []).forEach(function (c) {
+      var item = normalizeCustom(c);
+      if (item) { out.custom.push(item); out.count++; }
+    });
+
+    return out;
+  }
+
+  /* 本机配置逐字段覆盖文件配置，未改过的字段继续跟随文件；
+     背景名单只认文件，不参与本机覆盖 */
+  function mergeConfig(file, local) {
+    var base = file || {
+      years: {}, hidden: [], custom: [],
+      background: defaultBackground(), backgrounds: []
+    };
+    if (!local) return base;
+
+    return {
+      years: local.hasYears ? local.years : base.years,
+      hidden: local.hasHidden ? local.hidden : base.hidden,
+      custom: local.hasCustom ? local.custom : base.custom,
+      background: local.hasBackground ? local.background : base.background,
+      backgrounds: base.backgrounds || []
+    };
+  }
+
+  function readLocalConfig() {
+    try {
+      var raw = localStorage.getItem(CONFIG_KEY);
+      return raw ? normalizeConfig(JSON.parse(raw)) : null;
+    } catch (e) { return null; }
+  }
+
+  /* patch 里传 null 表示删掉该字段（回到文件配置） */
+  function writeLocalConfig(patch) {
+    try {
+      if (!patch) {
+        localStorage.removeItem(CONFIG_KEY);
+        return true;
+      }
+
+      var cur = {};
+      try { cur = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch (e) { cur = {}; }
+
+      Object.keys(patch).forEach(function (k) {
+        if (patch[k] === null || patch[k] === undefined) delete cur[k];
+        else cur[k] = patch[k];
+      });
+
+      var keys = Object.keys(cur).filter(function (k) { return k !== 'updatedAt'; });
+      if (!keys.length) {
+        localStorage.removeItem(CONFIG_KEY);
+      } else {
+        cur.updatedAt = new Date().toISOString();
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(cur));
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function reloadConfig() {
+    ACTIVE_CONFIG = mergeConfig(FILE_CONFIG, readLocalConfig());
+  }
+
+  /* =========================================================
+     ⑤ 节假日 + 自定义活动
+     ========================================================= */
+  function officialForYear(y) {
+    var rows = OFFICIAL[y];
+    if (!rows) return null;
+    return rows.map(function (r) {
+      return { key: r[0], start: r[1], days: r[2], source: 'official' };
+    });
+  }
+
+  function fallbackForYear(y) {
+    var out = [];
+    ORDER.forEach(function (key) {
+      var r = RULES[key];
+      var date = null;
+
+      if (r.rule === 'solar') {
+        date = new Date(y, r.month - 1, r.day);
+      } else if (r.rule === 'lunar') {
+        date = lunarToDate(y, r.month, r.day);
+      } else if (r.rule === 'eve') {
+        // 除夕：上一农历年十二月最后一天（廿九或三十）
+        date = lunarToDate(y - 1, 12, 30) || lunarToDate(y - 1, 12, 29);
+      } else if (r.rule === 'term') {
+        var day = qingmingDay(y);
+        if (day) date = new Date(y, 3, day);
+      }
+
+      if (date) out.push({ key: key, start: iso(date), days: r.days, source: 'rule' });
+    });
+    return out;
+  }
+
+  /* 基础数据（不含任何手动配置），用于「是否被改过」的判断 */
+  function baselineFor(y, key) {
+    var base = officialForYear(y) || fallbackForYear(y);
+    for (var i = 0; i < base.length; i++) {
+      if (base[i].key === key) return base[i];
+    }
+    return null;
+  }
+
+  /* 自定义活动在某年的日期；每年重复的按 MM-DD 展开 */
+  function customStart(c, y) {
+    if (c.yearly) {
+      var md = c.start.slice(5);
+      var d = parseISO(y + '-' + md);
+      if (d.getFullYear() !== y || (d.getMonth() + 1) !== (+md.slice(0, 2))) return null;
+      return y + '-' + md;
+    }
+    return c.start.slice(0, 4) === String(y) ? c.start : null;
+  }
+
+  function entriesForYear(y, opts) {
+    var includeHidden = !!(opts && opts.includeHidden);
+    var hidden = ACTIVE_CONFIG.hidden || [];
+
+    var base = officialForYear(y) || fallbackForYear(y);
+    var overrides = {};
+
+    ((ACTIVE_CONFIG.years || {})[y] || []).forEach(function (r) {
+      overrides[r.name] = { key: r.name, start: r.start, days: r.days, source: 'config' };
+    });
+
+    var out = base.map(function (e) { return overrides[e.key] || e; });
+
+    Object.keys(overrides).forEach(function (name) {
+      var exists = false;
+      for (var i = 0; i < out.length; i++) {
+        if (out[i].key === name) { exists = true; break; }
+      }
+      if (!exists) out.push(overrides[name]);
+    });
+
+    (ACTIVE_CONFIG.custom || []).forEach(function (c) {
+      var start = customStart(c, y);
+      if (!start) return;
+      out.push({
+        key: 'c:' + c.id,
+        name: c.name,
+        start: start,
+        days: c.days,
+        source: 'custom',
+        yearly: c.yearly
+      });
+    });
+
+    return out.filter(function (e) {
+      var h = e.source !== 'custom' && hidden.indexOf(e.key) !== -1;
+      e.hidden = h;
+      return includeHidden || !h;
+    });
+  }
+
+  function orderIndex(key) {
+    var i = ORDER.indexOf(key);
+    return i === -1 ? ORDER.length : i;
+  }
+
+  function upcoming(from) {
+    var base = dayNumber(from);
+    var found = [];
+    var y0 = from.getFullYear();
+
+    for (var y = y0; y <= y0 + 2; y++) {
+      var rows = entriesForYear(y);
+      for (var i = 0; i < rows.length; i++) {
+        var e = rows[i];
+        var d = parseISO(e.start);
+        var n = dayNumber(d);
+        if (n < base) continue;
+        found.push({
+          key: e.key,
+          name: e.name,
+          start: e.start,
+          days: e.days,
+          source: e.source,
+          date: d,
+          left: n - base
+        });
+      }
+    }
+
+    found.sort(function (a, b) {
+      if (a.date - b.date) return a.date - b.date;
+      return orderIndex(a.key) - orderIndex(b.key);
+    });
+
+    return found.slice(0, CONFIG.upcomingCount);
+  }
+
+  /* 距离本周周六（周末休息）还有几天；周六/周日为 0 */
+  function weekendLeft(from) {
+    var dow = from.getDay();
+    if (dow === 6 || dow === 0) return 0;
+    return 6 - dow;
+  }
+
+  /* =========================================================
+     ⑥ 渲染
+     ========================================================= */
+  var el = {
+    dateLine: document.getElementById('dateLine'),
+    lunarText: document.getElementById('lunarText'),
+    weekText: document.getElementById('weekText'),
+    weekendNum: document.getElementById('weekendNum'),
+    list: document.getElementById('holidayList'),
+    dataNote: document.getElementById('dataNote'),
+    copyBtn: document.getElementById('copyBtn'),
+    copyLabel: document.getElementById('copyLabel'),
+    live: document.getElementById('live'),
+    bgPhoto: document.getElementById('bgPhoto'),
+    bgPhoto2: document.getElementById('bgPhoto2'),
+    rope: document.getElementById('rope'),
+    settingsBtn: document.getElementById('settingsBtn'),
+    modal: document.getElementById('modal'),
+    modalCard: document.querySelector('.modal-card'),
+    modalSub: document.getElementById('modalSub'),
+    modalStatus: document.getElementById('modalStatus'),
+    editList: document.getElementById('editList'),
+    saveBtn: document.getElementById('saveBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    exportBtn: document.getElementById('exportBtn'),
+    addBtn: document.getElementById('addBtn'),
+    bgMode: document.getElementById('bgMode'),
+    bgEvery: document.getElementById('bgEvery'),
+    bgPre: document.getElementById('bgPre'),
+    bgFixed: document.getElementById('bgFixed'),
+    shuffleBtn: document.getElementById('shuffleBtn'),
+    modalPath: document.getElementById('modalPath'),
+    modalTip: document.getElementById('modalTip'),
+    toast: document.getElementById('toast')
+  };
+
+  /* 线上版本（GitHub Pages / 任意 http(s)）没有权限改仓库里的文件，
+     所以「保存到文件」要改成「导出配置」，文案也要说清楚 */
+  var HOSTED = /^https?:$/.test(location.protocol);
+
+  var view = null;
+
+  function render() {
+    var t = today();
+    var y = t.getFullYear();
+    var m = t.getMonth() + 1;
+    var d = t.getDate();
+
+    var lunar = solarToLunar(y, m, d);
+    var lunarStr = lunar && lunar.monthCn && lunar.dayCn
+      ? '农历' + lunar.monthCn + lunar.dayCn
+      : '农历—';
+
+    el.dateLine.textContent = y + '年' + m + '月' + d + '日';
+    el.lunarText.textContent = lunarStr;
+    el.weekText.textContent = WEEK[t.getDay()];
+
+    var wk = weekendLeft(t);
+    el.weekendNum.textContent = String(wk);
+
+    var items = upcoming(t);
+    el.list.textContent = '';
+
+    var ruleCount = items.filter(function (it) { return it.source === 'rule'; }).length;
+
+    items.forEach(function (it, idx) {
+      var li = document.createElement('li');
+      li.className = 'item' + (idx === 0 ? ' is-next' : '');
+
+      var main = document.createElement('div');
+
+      var name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = LABEL[it.key] || it.name || it.key;
+      /* 推算 / 手动 / 自定义都要稳定标出来，不能因为列表里只有一种来源就消失 */
+      if (it.source !== 'official') {
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = CHIP[it.source] || '';
+        name.appendChild(tag);
+      }
+
+      var sub = document.createElement('div');
+      sub.className = 'sub';
+      sub.textContent = it.date.getFullYear() + '年' + (it.date.getMonth() + 1) + '月' +
+        it.date.getDate() + '日 · 共' + it.days + '天';
+
+      main.appendChild(name);
+      main.appendChild(sub);
+
+      var num = document.createElement('div');
+      num.className = 'num';
+      num.textContent = String(it.left);
+      var unit = document.createElement('small');
+      unit.textContent = '天';
+      num.appendChild(unit);
+
+      li.appendChild(main);
+      li.appendChild(num);
+      el.list.appendChild(li);
+    });
+
+    if (ruleCount > 0) {
+      var years = [];
+      items.forEach(function (it) {
+        var yy = it.date.getFullYear();
+        if (it.source === 'rule' && years.indexOf(yy) === -1) years.push(yy);
+      });
+      el.dataNote.textContent = years.join('、') + '年放假安排尚未公布，' +
+        '标注「推算」的日期按惯例估算';
+      el.dataNote.hidden = false;
+    } else {
+      el.dataNote.hidden = true;
+    }
+
+    view = {
+      y: y, m: m, d: d,
+      weekday: WEEK[t.getDay()],
+      lunar: lunarStr,
+      weekend: wk,
+      items: items
+    };
+  }
+
+  /* =========================================================
+     ⑦ 纯文本通知
+     ========================================================= */
+  function buildText(v) {
+    var lines = [
+      '【假期倒计时】',
+      v.y + '年' + v.m + '月' + v.d + '日｜' + v.lunar + '｜' + v.weekday,
+      '',
+      '距离周末休息还有：' + v.weekend + '天'
+    ];
+    v.items.forEach(function (it) {
+      lines.push('距离' + (LABEL[it.key] || it.name || it.key) + '还有：' + it.left + '天');
+    });
+    return lines.join('\n');
+  }
+
+  function copyText(text) {
+    var api = navigator.clipboard;
+    if (!api || !api.writeText || !window.isSecureContext) {
+      return Promise.resolve(legacyCopy(text));
+    }
+    // 部分环境（如 file://、无焦点窗口）writeText 可能既不 resolve 也不 reject，
+    // 这里加一个兜底计时，超时后改用 execCommand，避免按钮"点了没反应"。
+    return new Promise(function (resolve) {
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        resolve(legacyCopy(text));
+      }, 900);
+
+      api.writeText(text).then(function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(true);
+      }, function () {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(legacyCopy(text));
+      });
+    });
+  }
+
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  var resetTimer = 0;
+
+  function flash(text, cls) {
+    el.copyLabel.textContent = text;
+    el.copyBtn.classList.toggle('done', cls !== 'error');
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(function () {
+      el.copyLabel.textContent = '复制通知';
+      el.copyBtn.classList.remove('done');
+    }, 1900);
+  }
+
+  el.copyBtn.addEventListener('click', function () {
+    if (!view) return;
+    copyText(buildText(view)).then(function (ok) {
+      if (ok) {
+        flash('已复制 ✓');
+        el.live.textContent = '通知已复制到剪贴板';
+      } else {
+        flash('复制失败，请手动选择', 'error');
+        el.live.textContent = '复制失败';
+      }
+    });
+  });
+
+  /* =========================================================
+     ⑧ 背景图：按分钟 / 小时 / 天轮换，或固定一张；绳子下拉随时换
+     ========================================================= */
+  var bgActive = 0;          // 0 = bgPhoto 在显示，1 = bgPhoto2
+  var bgCurrent = '';        // 当前这张的路径
+  var bgToken = 0;           // 只让最后一次请求落地，快速连点不会互相清图层
+  var bgPending = '';        // 正在加载的图片
+  var bgFailed = Object.create(null);   // 本次会话加载失败的图片
+  var bgClearTimer = 0;      // 旧图层清理计时器
+  var bgWarned = false;
+  var bgPinFixed = false;
+
+  /* 背景名单：读 holidays.config.js 的 backgrounds，未提供时尝试默认命名 */
+  function backgroundList() {
+    var declared = ACTIVE_CONFIG && ACTIVE_CONFIG.backgrounds;
+    var names = (Array.isArray(declared) && declared.length) ? declared : CONFIG.backgroundProbe;
+
+    return names
+      .filter(function (n) { return typeof n === 'string' && n.trim(); })
+      .map(function (n) {
+        var name = n.trim().replace(/^\.?\//, '');
+        // 名单里带不带 backgrounds/ 都认，避免重复前缀导致图片找不到
+        if (CONFIG.backgroundDir && name.indexOf(CONFIG.backgroundDir) === 0) {
+          name = name.slice(CONFIG.backgroundDir.length);
+        }
+        return CONFIG.backgroundDir + name;
+      });
+  }
+
+  /* 把配置里的图片名统一成 backgroundList() 里的完整路径 */
+  function bgPath(name) {
+    if (!name || typeof name !== 'string') return '';
+
+    var list = backgroundList();
+    var raw = name.trim().replace(/^\.?\//, '');
+    if (CONFIG.backgroundDir && raw.indexOf(CONFIG.backgroundDir) === 0) {
+      raw = raw.slice(CONFIG.backgroundDir.length);
+    }
+
+    var full = CONFIG.backgroundDir + raw;
+    return list.indexOf(full) !== -1 ? full : '';
+  }
+
+  function readStored() {
+    try {
+      var raw = localStorage.getItem(CONFIG.storageKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function writeStored(obj) {
+    try {
+      localStorage.setItem(CONFIG.storageKey, JSON.stringify(obj));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function bgSettings() {
+    return ACTIVE_CONFIG.background || defaultBackground();
+  }
+
+  /* 是否真的在配置里写了名单；没写时用默认探测名，失败不必打扰用户 */
+  function bgHasDeclaredList() {
+    return !!(ACTIVE_CONFIG && ACTIVE_CONFIG.backgrounds && ACTIVE_CONFIG.backgrounds.length);
+  }
+
+  function bgIntervalMs() {
+    var b = bgSettings();
+    var unit = b.mode === 'minute' ? 60e3 : (b.mode === 'hour' ? 3600e3 : 86400e3);
+    return unit * Math.max(1, b.every || 1);
+  }
+
+  /* 路径里如果有空格、#、? 或中文，逐段编码，避免图片加载不到 */
+  function bgUrl(src) {
+    return String(src).split('/').map(function (part) {
+      return encodeURIComponent(part);
+    }).join('/');
+  }
+
+  /* ---------- 响应式尺寸档位 ----------
+     同一张照片可以额外生成 1280 / 2560 两档（运行 scripts/make-bg-variants.sh），
+     页面按「视口宽度 × 像素比」挑一档，手机不必下载 2–6MB 的原图。
+     某一档不存在时自动退回下一档，最后退回原图；新加照片没有生成变体也能正常显示。 */
+  var BG_VARIANTS = [
+    { dir: '1280/', width: 1280 },
+    { dir: '2560/', width: 2560 }
+  ];
+
+  function bgTierDir() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 1024;
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    // 允许 13% 的轻微放大，避免为了几十像素白白多下一档
+    var need = w * dpr * 0.87;
+
+    for (var i = 0; i < BG_VARIANTS.length; i++) {
+      if (need <= BG_VARIANTS[i].width) return BG_VARIANTS[i].dir;
+    }
+    return '';
+  }
+
+  var bgTier = bgTierDir();      // 当前使用的档位，屏幕变化时对比用
+
+  /* 依次尝试：合适的一档变体 → 原图 */
+  function bgCandidates(src) {
+    var out = [];
+    var dir = bgTierDir();
+    var cut = src.lastIndexOf('/') + 1;
+
+    if (dir) out.push(src.slice(0, cut) + dir + src.slice(cut));
+    out.push(src);
+    return out;
+  }
+
+  /* 两层交叉淡化：新图在备用层铺好，再淡入，旧图随后释放。
+     只允许最后一次请求落地，快速连点时旧图的计时器不会把新图层清掉。 */
+  function applyBackground(src, onReady) {
+    if (!src) return;
+
+    var token = ++bgToken;
+    bgPending = src;
+    var urls = bgCandidates(src);
+    var index = 0;
+
+    function giveUp() {
+      if (token !== bgToken) return;
+      bgPending = '';
+      bgFailed[src] = true;
+
+      // 坏图直接跳过；固定模式下等下一张加载成功后再钉死
+      if (bgSettings().mode === 'fixed') bgPinFixed = true;
+      if (!switchBackground(false) && !bgWarned && bgHasDeclaredList()) {
+        bgWarned = true;
+        toast('有背景图加载失败');
+      }
+    }
+
+    function show(url) {
+      if (token !== bgToken) return;
+      bgPending = '';
+      delete bgFailed[src];
+
+      // 在图片真正加载完的这一刻再选层，不能提前捕获
+      var layers = [el.bgPhoto, el.bgPhoto2];
+      var outgoing = layers[bgActive];
+      var incoming = layers[1 - bgActive];
+      var img = incoming.querySelector('img');
+      if (!img) { giveUp(); return; }
+
+      // 只换 <img> 的 src，尺寸和位置交给 CSS 的 object-fit:cover，
+      // 这样任何长宽比、任何分辨率的照片都是等比铺满，不会被拉伸
+      img.src = bgUrl(url);
+      incoming.style.zIndex = '-1';
+      outgoing.style.zIndex = '-2';
+
+      incoming.classList.remove('is-ready');
+      // 下一帧再开启透明度过渡，避免和设置图片挤在同一帧里
+      setTimeout(function () {
+        if (token !== bgToken) return;
+        incoming.classList.add('is-ready');
+      }, 20);
+
+      bgActive = 1 - bgActive;
+      bgCurrent = src;
+
+      // 旧图只由当前这次切换负责清理；快速连点时先取消上一个计时器
+      clearTimeout(bgClearTimer);
+      bgClearTimer = setTimeout(function () {
+        if (token !== bgToken) return;        // 期间又换了图，别清掉新图层
+        outgoing.classList.remove('is-ready');
+        var old = outgoing.querySelector('img');
+        if (old) old.removeAttribute('src');
+      }, 1100);
+
+      if (typeof onReady === 'function') onReady();
+    }
+
+    function attempt() {
+      if (token !== bgToken) return;
+      if (index >= urls.length) { giveUp(); return; }
+
+      var url = urls[index++];
+      var probe = new Image();
+      var guard = setTimeout(function () {
+        probe.onload = null;
+        probe.onerror = null;
+        attempt();                            // 超时就试下一档
+      }, 15000);
+
+      probe.onload = function () {
+        clearTimeout(guard);
+        show(url);
+      };
+      probe.onerror = function () {
+        clearTimeout(guard);
+        attempt();                            // 这一档不存在，退回原图
+      };
+
+      probe.src = bgUrl(url);
+    }
+
+    attempt();
+  }
+
+  /* 屏幕变宽时（旋转、拉伸窗口、接外接屏）检查是否需要换更高一档 */
+  function initBackgroundTierWatch() {
+    var timer = 0;
+    function check() {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        var next = bgTierDir();
+        if (next === bgTier) return;
+        bgTier = next;
+        if (bgCurrent) applyBackground(bgCurrent);
+      }, 400);
+    }
+    window.addEventListener('resize', check);
+    window.addEventListener('orientationchange', check);
+  }
+
+  /* 优先避开当前图、正在加载的图，以及本次会话加载失败的图 */
+  function pickBackgroundSrc() {
+    var list = backgroundList();
+    if (!list.length) return '';
+
+    var pool = list.filter(function (s) {
+      return !bgFailed[s] && s !== bgCurrent && s !== bgPending;
+    });
+
+    if (!pool.length) {
+      pool = list.filter(function (s) { return !bgFailed[s] && s !== bgCurrent; });
+    }
+    if (!pool.length) {
+      pool = list.filter(function (s) { return !bgFailed[s]; });
+    }
+    if (!pool.length) return '';
+
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function pinFixedBackground(src) {
+    var b = bgSettings();
+    b.fixed = src;
+    writeLocalConfig({ background: b });
+    reloadConfig();
+    if (el.bgFixed) el.bgFixed.value = src;
+  }
+
+  /* manual = 用户拉的绳子；固定模式下等图片真正加载成功后再钉死 */
+  function switchBackground(manual) {
+    var list = backgroundList();
+    if (!list.length) return false;
+
+    var src = pickBackgroundSrc();
+    if (!src) {
+      bgPinFixed = false;
+      return false;
+    }
+
+    if (manual) bgPinFixed = bgSettings().mode === 'fixed';
+
+    applyBackground(src, function () {
+      writeStored({ src: src, at: Date.now() });
+      if (bgPinFixed) {
+        var shouldPin = bgSettings().mode === 'fixed';
+        bgPinFixed = false;
+        if (shouldPin) pinFixedBackground(src);
+      }
+    });
+
+    return true;
+  }
+
+  function manualBackground() {
+    if (!switchBackground(true)) {
+      toast(backgroundList().length ? '背景图暂时加载不出来，请稍后再试' : '背景目录里还没有图片');
+    }
+  }
+
+  function checkRotation() {
+    var b = bgSettings();
+    if (b.mode === 'fixed') return;
+
+    var stored = readStored();
+    if (!stored || !stored.at || Date.now() - stored.at >= bgIntervalMs()) {
+      switchBackground(false);
+    }
+  }
+
+  function initBackground() {
+    var list = backgroundList();
+    if (!list.length) return;
+
+    var b = bgSettings();
+    var stored = readStored();
+    var saved = bgPath(stored && stored.src);
+
+    if (b.mode === 'fixed') {
+      var src = bgPath(b.fixed) || saved || list[0];
+      applyBackground(src);
+      writeStored({ src: src, at: Date.now() });
+      return;
+    }
+
+    if (saved && stored.at && Date.now() - stored.at < bgIntervalMs()) {
+      applyBackground(saved);                 // 还没到时间 → 沿用
+      return;
+    }
+
+    switchBackground(false);
+  }
+
+  /* 绳子：按住往下拉，松手换一张（点一下也行） */
+  function initRope() {
+    var rope = el.rope;
+    if (!rope) return;
+
+    var BASE = 72;               // 静止时绳子高度，和 CSS 保持一致
+    var MAX = 150;               // 最多拉这么长
+    var startY = 0;
+    var dy = 0;
+    var dragging = false;
+    var activeId = null;
+
+    // 首次进页面轻轻弹一下，提示这根绳子能拉
+    rope.classList.add('is-hint');
+    rope.addEventListener('animationend', function () {
+      rope.classList.remove('is-hint');
+    });
+
+    function setPull(v) {
+      dy = Math.max(0, Math.min(MAX, v));
+      // 拉伸高度而不是整体下移：顶端始终挂在视口上沿
+      rope.style.height = (BASE + dy) + 'px';
+    }
+
+    function finish(change, id) {
+      if (!dragging) return;
+      if (id !== undefined && activeId !== null && id !== activeId) return;
+
+      dragging = false;
+      activeId = null;
+      var pulled = dy;
+      dy = 0;
+
+      rope.classList.remove('is-dragging');
+      rope.style.height = '';       // 交还给 CSS 过渡，带一点回弹
+
+      // 快速轻拉也算一次，不用非得拉满
+      if (change && (pulled >= 40 || pulled < 6)) manualBackground();
+    }
+
+    rope.addEventListener('pointerdown', function (e) {
+      if (e.button || dragging) return;
+      rope.classList.remove('is-hint');
+      dragging = true;
+      activeId = e.pointerId;
+      startY = e.clientY;
+      dy = 0;
+      rope.classList.add('is-dragging');
+      rope.style.height = BASE + 'px';
+      try { rope.setPointerCapture(e.pointerId); } catch (err) {}
+      e.preventDefault();
+    });
+
+    rope.addEventListener('pointermove', function (e) {
+      if (!dragging || e.pointerId !== activeId) return;
+      setPull(e.clientY - startY);
+    });
+
+    rope.addEventListener('pointerup', function (e) { finish(true, e.pointerId); });
+    rope.addEventListener('pointercancel', function (e) { finish(false, e.pointerId); });
+
+    // 指针在窗口外松开、或指针捕获丢失时也能复位，避免绳子卡在半截
+    window.addEventListener('pointerup', function (e) { finish(true, e.pointerId); });
+    window.addEventListener('pointercancel', function (e) { finish(false, e.pointerId); });
+    rope.addEventListener('lostpointercapture', function () { finish(false); });
+    window.addEventListener('blur', function () { finish(false); });
+
+    rope.addEventListener('click', function (e) {
+      if (e.detail === 0) manualBackground();   // 键盘触发的 click
+    });
+  }
+
+  /* =========================================================
+     ⑨ 假期设置：假期 + 自定义活动 + 背景轮换
+     ========================================================= */
+  var editRows = [];
+  var toastTimer = 0;
+
+  function cnDate(d) {
+    return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+
+  function toast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.toast.classList.remove('show'); }, 2400);
+  }
+
+  /* 弹窗里的列表：未来一年 + 一年之外的自定义活动 */
+  function modalEntries() {
+    var t = today();
+    var from = dayNumber(t);
+    var to = from + 365;
+    var y0 = t.getFullYear();
+    var rows = [];
+
+    for (var y = y0; y <= y0 + 2; y++) {
+      entriesForYear(y, { includeHidden: true }).forEach(function (e) {
+        var d = parseISO(e.start);
+        var n = dayNumber(d);
+        if (n < from || n > to) return;
+
+        rows.push({
+          key: e.key,
+          name: e.name,
+          start: e.start,
+          days: e.days,
+          source: e.source,
+          yearly: e.yearly,
+          hidden: !!e.hidden,
+          date: d
+        });
+      });
+    }
+
+    (ACTIVE_CONFIG.custom || []).forEach(function (c) {
+      var key = 'c:' + c.id;
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].key === key) return;
+      }
+      rows.push({
+        key: key,
+        name: c.name,
+        start: c.start,
+        days: c.days,
+        source: 'custom',
+        hidden: false,
+        date: parseISO(c.start),
+        yearly: c.yearly
+      });
+    });
+
+    rows.sort(function (a, b) {
+      if (a.date - b.date) return a.date - b.date;
+      return orderIndex(a.key) - orderIndex(b.key);
+    });
+
+    return rows;
+  }
+
+  function buildRow(it) {
+    var custom = it.source === 'custom';
+
+    var li = document.createElement('li');
+    li.className = 'edit-row';
+
+    var nameCell = document.createElement('div');
+    nameCell.className = 'er-name';
+    var nameInput = null;
+
+    if (custom) {
+      nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.maxLength = 12;
+      nameInput.value = it.name || '';
+      nameInput.placeholder = '活动名称';
+      nameInput.title = it.name || '';
+      nameInput.setAttribute('aria-label', '活动名称');
+      nameCell.appendChild(nameInput);
+    } else {
+      nameCell.textContent = LABEL[it.key] || it.name || it.key;
+    }
+
+    var startInput = document.createElement('input');
+    startInput.type = 'date';
+    startInput.className = 'er-start';
+    startInput.value = it.start;
+    startInput.setAttribute('aria-label', (custom ? '活动' : (LABEL[it.key] || it.name || it.key)) + '开始日期');
+
+    var daysInput = document.createElement('input');
+    daysInput.type = 'number';
+    daysInput.className = 'er-days';
+    daysInput.min = '1';
+    daysInput.max = '30';
+    daysInput.step = '1';
+    daysInput.value = String(it.days);
+    daysInput.setAttribute('aria-label', '持续天数');
+
+    var range = document.createElement('div');
+    range.className = 'er-range';
+
+    var yearlyBox = null;
+    if (custom) {
+      var yearlyLabel = document.createElement('label');
+      yearlyLabel.className = 'er-yearly';
+      yearlyBox = document.createElement('input');
+      yearlyBox.type = 'checkbox';
+      yearlyBox.checked = !!it.yearly;
+      yearlyLabel.appendChild(yearlyBox);
+      yearlyLabel.appendChild(document.createTextNode('每年'));
+      range.appendChild(yearlyLabel);
+    }
+
+    var cap = document.createElement('span');
+    cap.className = 'er-cap';
+    range.appendChild(cap);
+
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'er-del';
+    del.textContent = '×';
+    del.title = '删除';
+    del.setAttribute('aria-label', '删除这一项');
+
+    li.appendChild(nameCell);
+    li.appendChild(startInput);
+    li.appendChild(daysInput);
+    li.appendChild(range);
+    li.appendChild(del);
+    el.editList.appendChild(li);
+
+    var row = {
+      key: it.key,
+      base: it,
+      custom: custom,
+      deleted: !!it.hidden,
+      li: li,
+      nameInput: nameInput,
+      start: startInput,
+      days: daysInput,
+      cap: cap,
+      range: range,
+      yearly: yearlyBox,
+      del: del
+    };
+
+    startInput.addEventListener('input', function () { syncRow(row); });
+    daysInput.addEventListener('input', function () { syncRow(row); });
+    if (nameInput) {
+      nameInput.addEventListener('input', function () {
+        nameInput.title = nameInput.value;
+        syncRow(row);
+      });
+      nameInput.addEventListener('blur', function () { nameInput.scrollLeft = 0; });
+    }
+    if (yearlyBox) yearlyBox.addEventListener('change', function () { syncRow(row); });
+
+    del.addEventListener('click', function () {
+      row.deleted = !row.deleted;
+      applyDeleted(row);
+      if (row.deleted) {
+        toast(custom ? '已删除，点「保存修改」生效' : '已隐藏，点「保存修改」生效');
+      }
+    });
+
+    applyDeleted(row);
+    return row;
+  }
+
+  function applyDeleted(row) {
+    row.li.classList.toggle('is-off', row.deleted);
+    row.del.textContent = row.deleted ? '↺' : '×';
+    row.del.title = row.deleted ? '恢复' : '删除';
+    row.del.classList.toggle('is-undo', row.deleted);
+
+    row.start.disabled = row.deleted;
+    row.days.disabled = row.deleted;
+    if (row.nameInput) row.nameInput.disabled = row.deleted;
+    if (row.yearly) row.yearly.disabled = row.deleted;
+
+    syncRow(row);
+  }
+
+  function syncRow(row) {
+    if (row.deleted) {
+      row.cap.textContent = row.custom ? '已删除' : '已隐藏';
+      row.range.classList.remove('is-error');
+      return;
+    }
+
+    var startVal = row.start.value;
+    var daysVal = parseInt(row.days.value, 10);
+    var nameVal = row.nameInput ? row.nameInput.value.trim() : '';
+    var dateOk = /^\d{4}-\d{2}-\d{2}$/.test(startVal);
+    var daysOk = !isNaN(daysVal) && daysVal >= 1 && daysVal <= 30;
+    var nameOk = !row.custom || nameVal.length > 0;
+
+    row.start.classList.toggle('is-error', !dateOk);
+    row.days.classList.toggle('is-error', !daysOk);
+    if (row.nameInput) row.nameInput.classList.toggle('is-error', !nameOk);
+
+    var changed = startVal !== row.base.start || String(daysVal) !== String(row.base.days) ||
+      (row.custom && nameVal !== (row.base.name || ''));
+    row.li.classList.toggle('is-changed', changed);
+
+    if (!dateOk || !daysOk) {
+      row.cap.textContent = !dateOk ? '请选择起止日期' : '天数需在 1–30 之间';
+      row.range.classList.add('is-error');
+      return;
+    }
+
+    row.range.classList.remove('is-error');
+    var s = parseISO(startVal);
+    var e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + daysVal - 1);
+    /* 自定义提醒右侧有「每年」勾选，宽度紧，结束日期只写月日；
+       内置节日同一年也省略年份，只有跨年时才补上年份 */
+    var endText = (row.custom || e.getFullYear() === s.getFullYear())
+      ? (e.getMonth() + 1) + '月' + e.getDate() + '日'
+      : cnDate(e);
+    row.cap.textContent = '至 ' + endText + '（' + WEEK_SHORT[e.getDay()] + '）· 共 ' + daysVal + ' 天';
+  }
+
+  function addRow() {
+    var t = today();
+    var later = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7);
+
+    var row = buildRow({
+      key: 'c:' + ('n' + Date.now().toString(36)),
+      name: '',
+      start: iso(later),
+      days: 1,
+      source: 'custom',
+      hidden: false,
+      date: later
+    });
+
+    editRows.push(row);
+    row.li.classList.add('is-changed');
+    if (row.nameInput) row.nameInput.value = '';
+    syncRow(row);
+
+    if (row.nameInput) {
+      row.nameInput.focus();
+      if (row.li.scrollIntoView) row.li.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  /* ---------- 背景设置控件 ---------- */
+  function renderBackgroundControls() {
+    var b = bgSettings();
+    var list = backgroundList();
+
+    el.bgMode.value = b.mode;
+    el.bgEvery.value = String(b.every);
+
+    el.bgFixed.textContent = '';
+    list.forEach(function (src) {
+      var o = document.createElement('option');
+      o.value = src;
+      o.textContent = src.split('/').pop();
+      el.bgFixed.appendChild(o);
+    });
+
+    var pinned = b.fixed || bgCurrent;
+    if (pinned && list.indexOf(pinned) !== -1) el.bgFixed.value = pinned;
+
+    syncBackgroundControls();
+  }
+
+  function syncBackgroundControls() {
+    var mode = el.bgMode.value;
+    var fixed = mode === 'fixed';
+
+    el.bgPre.hidden = fixed;
+    el.bgEvery.hidden = fixed;
+    el.bgFixed.hidden = !fixed;
+
+    fitModeSelect();
+  }
+
+  /* 按当前选中的“分钟 / 小时 / 天 / 固定一张”收紧下拉框宽度，
+     让自绘的小箭头紧跟在文字后面，而不是贴在框的最右侧 */
+  var fitModeCanvas = null;
+  function fitModeSelect() {
+    var sel = el.bgMode;
+    if (!sel) return;
+    var opt = sel.options[sel.selectedIndex];
+    var text = opt ? opt.textContent : '';
+
+    var cs = getComputedStyle(sel);
+    if (!fitModeCanvas) fitModeCanvas = document.createElement('canvas').getContext('2d');
+    if (!fitModeCanvas) { sel.style.width = ''; return; }
+    fitModeCanvas.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+
+    /* 左内边距 10 + 右内边距 26（含箭头与间距）+ 左右边框 2，再留 1px 余量 */
+    var width = Math.ceil(fitModeCanvas.measureText(text).width) + 39;
+    sel.style.width = Math.max(width, 52) + 'px';
+  }
+
+  function readBackgroundControls() {
+    var every = Math.round(+el.bgEvery.value);
+    if (!isFinite(every) || every < 1) every = 1;
+    if (every > 999) every = 999;
+
+    return {
+      mode: el.bgMode.value,
+      every: every,
+      fixed: el.bgFixed.value || ''
+    };
+  }
+
+  function renderModal() {
+    var rows = modalEntries();
+    var t = today();
+    var end = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 365);
+
+    el.modalSub.textContent = '近一年 · ' + cnDate(t) + ' — ' + cnDate(end) + '，共 ' + rows.length + ' 项';
+
+    var status = [];
+    if (FILE_CONFIG) {
+      status.push('已加载 holidays.config.js');
+    } else {
+      status.push('未找到 holidays.config.js，当前使用内置数据');
+    }
+    if (readLocalConfig()) status.push('本机修改生效中');
+    el.modalStatus.textContent = status.join(' · ');
+    el.modalStatus.classList.toggle('is-warn', !FILE_CONFIG);
+
+    el.editList.textContent = '';
+    editRows = [];
+
+    rows.forEach(function (it) {
+      editRows.push(buildRow(it));
+    });
+
+    renderBackgroundControls();
+  }
+
+  /* 页面跑在 file:// 时，把当前目录显示出来，方便对准文件 */
+  function configDir() {
+    if (location.protocol !== 'file:') return '';
+    try {
+      return decodeURIComponent(location.pathname || '').replace(/\/[^/]*$/, '');
+    } catch (e) { return ''; }
+  }
+
+  /* 线上版本（GitHub Pages 等）：入口文案改成"导出"，并说明改完要提交才生效 */
+  function initHostedUI() {
+    if (!HOSTED) return;
+
+    if (el.exportBtn) {
+      el.exportBtn.textContent = '导出配置';
+      el.exportBtn.title = '下载 holidays.config.js；覆盖仓库里的同名文件并提交后，所有人才会看到更新';
+    }
+    if (el.modalTip) {
+      el.modalTip.textContent = '线上版本读取的是仓库里的 holidays.config.js：这里的修改只保存在当前浏览器，' +
+        '换设备或清缓存就没了。点「导出配置」下载文件，覆盖仓库里的同名文件并提交，别人才会看到。';
+    }
+  }
+
+  function openModal() {
+    renderModal();
+
+    var dir = configDir();
+    el.modalPath.hidden = !dir;
+    el.modalPath.textContent = dir ? '配置文件位置：' + dir + '/holidays.config.js' : '';
+    el.modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(function () {
+      if (el.modalCard) el.modalCard.focus();
+    }, 20);
+  }
+
+  function closeModal() {
+    el.modal.hidden = true;
+    document.body.style.overflow = '';
+    el.settingsBtn.focus();
+  }
+
+  /* 把弹窗里当前看到的内容收集成一份配置（不落盘） */
+  function collectConfig() {
+    var years = {};
+    var existing = ACTIVE_CONFIG.years || {};
+    Object.keys(existing).forEach(function (y) {
+      years[y] = existing[y].map(function (r) {
+        return { name: r.name, start: r.start, days: r.days };
+      });
+    });
+
+    var hidden = [];
+    var custom = [];
+    var bad = null;
+
+    editRows.forEach(function (row) {
+      if (row.deleted) {
+        if (!row.custom) hidden.push(row.key);
+        return;
+      }
+
+      var startVal = row.start.value;
+      var daysVal = parseInt(row.days.value, 10);
+      var nameVal = row.nameInput ? row.nameInput.value.trim() : '';
+
+      var okName = !row.custom || nameVal.length > 0;
+      var okRange = /^\d{4}-\d{2}-\d{2}$/.test(startVal) && !isNaN(daysVal) && daysVal >= 1 && daysVal <= 30;
+
+      if (!okName || !okRange) {
+        bad = bad || row;
+        return;
+      }
+
+      if (row.custom) {
+        custom.push({
+          id: row.key.slice(2),
+          name: nameVal.slice(0, 12),
+          start: startVal,
+          days: daysVal,
+          yearly: !!(row.yearly && row.yearly.checked)
+        });
+        return;
+      }
+
+      var y = startVal.slice(0, 4);
+
+      Object.keys(years).forEach(function (yy) {
+        years[yy] = years[yy].filter(function (r) { return r.name !== row.key; });
+        if (!years[yy].length) delete years[yy];
+      });
+
+      var base = baselineFor(+y, row.key);
+      var changed = !base || base.start !== startVal || base.days !== daysVal;
+
+      if (changed) {
+        (years[y] = years[y] || []).push({ name: row.key, start: startVal, days: daysVal });
+      }
+    });
+
+    return {
+      bad: bad,
+      years: years,
+      hidden: hidden,
+      custom: custom,
+      // 背景名单不在弹窗里编辑，原样保留文件里的顺序
+      backgrounds: (FILE_CONFIG && FILE_CONFIG.backgrounds) || [],
+      background: readBackgroundControls()
+    };
+  }
+
+  function warnBad(bad) {
+    (bad.nameInput || bad.start).focus();
+    toast(bad.custom && !(bad.nameInput.value || '').trim() ? '先给这个提醒起个名字' : '有日期或天数没填好');
+  }
+
+  /* 写进本机浏览器（localStorage），不动文件 */
+  function applyConfig(cfg) {
+    return writeLocalConfig({
+      years: Object.keys(cfg.years).length ? cfg.years : null,
+      hidden: cfg.hidden.length ? cfg.hidden : null,
+      custom: cfg.custom.length ? cfg.custom : null,
+      background: cfg.background
+    });
+  }
+
+  function configFileText(cfg) {
+    var payload = {
+      updatedAt: new Date().toISOString(),
+      years: cfg.years,
+      hidden: cfg.hidden,
+      custom: cfg.custom,
+      backgrounds: cfg.backgrounds || [],
+      background: cfg.background
+    };
+
+    var head = [
+      '/* =========================================================',
+      '   holidays.config.js — 本地配置（唯一配置文件）',
+      '   导出于 ' + cnDate(new Date()),
+      '   与 index.html 放在同一目录，刷新页面即生效，优先级高于内置数据与推算。',
+      '   ---------------------------------------------------------',
+      '   这个文件同时保存「假期修正 / 自定义提醒」和「背景图名单 / 背景轮换设置」。',
+      '',
+      '   页面的「假期设置」改完点「保存到文件」，会生成同样格式的',
+      '   文件；选中项目里的本文件覆盖即可，背景名单也会一起写进去。',
+      '',
+      '   下面几个字段都可以只写一部分，没写的继续用内置数据 / 默认值：',
+      '',
+      '   years    修正内置节日：{ 年份: [{ name, start, days }] }',
+      '            name  元旦 / 春节 / 清明 / 劳动节 / 端午 / 中秋 / 国庆',
+      '            start 假期首日 YYYY-MM-DD',
+      '            days  放假天数（含首日）',
+      '',
+      "   hidden   不想在倒计时里出现的节日名，比如 ['元旦']",
+      '',
+      '   custom   自定义提醒（团建、生日、旅行……）',
+      '            { id, name, start, days, yearly }',
+      '            yearly: true 表示每年重复（只取 start 的月日）',
+      '',
+      '   backgrounds  背景图名单（照片放在 backgrounds/ 目录）',
+      '            一行一个，区分大小写；写文件名或 backgrounds/xxx 都可以。',
+      '            留空数组时，页面会尝试 bg-1.jpg … bg-6.jpg 这些默认命名。',
+      '',
+      '   background   背景轮换',
+      "            mode   'minute' | 'hour' | 'day' | 'fixed'",
+      '            every  间隔数量（1–999）',
+      "            fixed  固定模式下使用的图片，如 'backgrounds/DSC07531.JPG'",
+      '',
+      '   示例：',
+      '     "years": {"2027":[{"name":"元旦","start":"2027-01-01","days":3},{"name":"劳动节","start":"2027-05-01","days":4}]},',
+      '     "hidden": ["元旦"],',
+      '     "custom": [{"id":"c1","name":"小满生日","start":"2027-05-21","days":1,"yearly":true}],',
+      '     "backgrounds": ["DSC07531.JPG", "DSC09069.JPG", "DSC09072.JPG"],',
+      '     "background": {"mode":"minute", "every":1, "fixed":"backgrounds/DSC07531.JPG"}',
+      '   ========================================================= */',
+      'window.HOLIDAY_CONFIG = '
+    ].join('\n');
+
+    return head + JSON.stringify(payload, null, 2) + ';\n';
+  }
+
+  function saveModal() {
+    var cfg = collectConfig();
+    if (cfg.bad) { warnBad(cfg.bad); return; }
+
+    if (!applyConfig(cfg)) {
+      toast('保存失败：浏览器存储不可用');
+      return;
+    }
+
+    reloadConfig();
+    render();
+    initBackground();
+    closeModal();
+    toast('已保存到本机浏览器');
+  }
+
+  function resetToFile() {
+    var msg = FILE_CONFIG
+      ? '放弃本机修改（含自定义提醒），恢复为 holidays.config.js 的内容？'
+      : '未找到配置文件，将清除本机修改并回到内置数据，继续？';
+    if (!window.confirm(msg)) return;
+
+    writeLocalConfig(null);
+    reloadConfig();
+    renderModal();
+    render();
+    initBackground();
+    toast(FILE_CONFIG ? '已恢复为文件内容' : '已清除本机修改');
+  }
+
+  function downloadConfig(text) {
+    try {
+      var blob = new Blob([text], { type: 'text/javascript;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'holidays.config.js';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      toast(HOSTED
+        ? '已下载 holidays.config.js，覆盖仓库里的同名文件并提交后生效'
+        : '已下载 holidays.config.js，用它覆盖项目里的同名文件');
+    } catch (e) {
+      toast('导出失败：浏览器不支持下载');
+    }
+  }
+
+  /* 保存到文件：Chrome / Edge 可直接写，其他浏览器退回下载 */
+  function saveToFile() {
+    var cfg = collectConfig();
+    if (cfg.bad) { warnBad(cfg.bad); return; }
+
+    var text = configFileText(cfg);
+
+    // 线上版本写不了仓库里的文件，直接给下载，避免"写了但网站没变"
+    if (HOSTED) {
+      downloadConfig(text);
+      return;
+    }
+
+    if (typeof window.showSaveFilePicker !== 'function') {
+      downloadConfig(text);
+      return;
+    }
+
+    var picker;
+    try {
+      picker = window.showSaveFilePicker({
+        suggestedName: 'holidays.config.js',
+        types: [{ description: 'JavaScript 配置', accept: { 'text/javascript': ['.js'] } }]
+      });
+    } catch (e) {
+      downloadConfig(text);
+      return;
+    }
+
+    picker.then(function (handle) {
+      return handle.createWritable().then(function (w) {
+        return w.write(text).then(function () { return w.close(); }).then(function () { return handle; });
+      });
+    }).then(function (handle) {
+      // 文件写成功：本机也存一份，页面显示和文件保持一致
+      applyConfig(cfg);
+      FILE_CONFIG = normalizeConfig(cfg);
+      reloadConfig();
+      render();
+      initBackground();
+      closeModal();
+      toast('已写入 ' + (handle.name || 'holidays.config.js'));
+    })['catch'](function (err) {
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+      downloadConfig(text);
+    });
+  }
+
+  el.settingsBtn.addEventListener('click', openModal);
+  el.saveBtn.addEventListener('click', saveModal);
+  el.resetBtn.addEventListener('click', resetToFile);
+  el.exportBtn.addEventListener('click', saveToFile);
+  el.addBtn.addEventListener('click', addRow);
+  el.bgMode.addEventListener('change', syncBackgroundControls);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitModeSelect);
+  window.addEventListener('resize', fitModeSelect);
+  el.shuffleBtn.addEventListener('click', manualBackground);
+
+  Array.prototype.forEach.call(el.modal.querySelectorAll('[data-close]'), function (node) {
+    node.addEventListener('click', closeModal);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (el.modal.hidden) return;
+
+    if (e.key === 'Escape') {
+      closeModal();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+
+    var focusables = Array.prototype.filter.call(
+      el.modal.querySelectorAll('button, input, select, a[href]'),
+      function (n) { return !n.disabled && n.offsetParent !== null; }
+    );
+    if (!focusables.length) return;
+
+    var first = focusables[0];
+    var last = focusables[focusables.length - 1];
+
+    if (!el.modal.contains(document.activeElement)) {
+      e.preventDefault();
+      first.focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  /* =========================================================
+     ⑩ 启动 + 跨天刷新
+     ========================================================= */
+  initHostedUI();
+  initBackgroundTierWatch();
+  render();
+  initBackground();
+  initRope();
+
+  var currentDay = iso(today());
+  setInterval(function () {
+    var d = iso(today());
+    if (d !== currentDay) {
+      currentDay = d;
+      render();
+    }
+    checkRotation();          // 到点就换背景
+  }, 30000);
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      var d = iso(today());
+      if (d !== currentDay) {
+        currentDay = d;
+        render();
+      }
+      checkRotation();
+    }
+  });
+})();
+</script>
+</body>
 </html>

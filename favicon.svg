@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="假期倒计时">
+  <rect width="64" height="64" rx="14" fill="#3f6455"/>
+  <rect x="13" y="16" width="38" height="35" rx="7" fill="#fdf9f3"/>
+  <path d="M13 27h38" stroke="#3f6455" stroke-width="2.4" opacity=".28"/>
+  <path d="M23 11v9M41 11v9" stroke="#fdf9f3" stroke-width="4.2" stroke-linecap="round"/>
+  <circle cx="32" cy="38.5" r="7.2" fill="none" stroke="#3f6455" stroke-width="3.2"/>
+  <path d="M32 34.2V38.5l3 1.9" stroke="#3f6455" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
